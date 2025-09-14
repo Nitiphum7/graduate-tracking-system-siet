@@ -4,6 +4,8 @@ import styles from './Form1Page.module.css';
 
 function Form1Page() {
   const navigate = useNavigate();
+  const API_URL = 'http://localhost:3000';
+
   // --- State สำหรับข้อมูล ---
   const [studentInfo, setStudentInfo] = useState(null);
   const [advisors, setAdvisors] = useState([]);
@@ -14,81 +16,90 @@ function Form1Page() {
   const [mainAdvisor, setMainAdvisor] = useState('');
   const [coAdvisor, setCoAdvisor] = useState('');
   const [comment, setComment] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
 
   // --- Effect สำหรับดึงข้อมูลเมื่อเปิดหน้า ---
   useEffect(() => {
     const loadFormData = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
+        // 1. ดึงข้อมูลผู้ใช้ที่ล็อกอินจาก Local Storage
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (!storedUser || !storedUser.id) {
+          throw new Error("ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่");
+        }
+        setCurrentUser(storedUser);
 
-        const [students, advisorList, departments, programs] = await Promise.all([
-          fetch("/data/student.json").then(res => res.json()),
-          fetch("/data/advisor.json").then(res => res.json()),
-          fetch("/data/structures/departments.json").then(res => res.json()),
-          fetch("/data/structures/programs.json").then(res => res.json())
-        ]);
+        // 2. เรียก API เพื่อดึงข้อมูลนักศึกษาและรายชื่ออาจารย์
+        const response = await fetch(`${API_URL}/api/form1/data/${storedUser.id}`);
+        if (!response.ok) {
+          throw new Error("ไม่สามารถดึงข้อมูลจาก Server ได้");
+        }
+        const data = await response.json();
 
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
-
-        const departmentName = departments.find(d => d.id === currentUser.department_id)?.name || '';
-        const programName = programs.find(p => p.id === currentUser.program_id)?.name || '';
-
+        // 3. ตั้งค่า State ด้วยข้อมูลที่ได้รับ
         setStudentInfo({
-          ...currentUser,
-          fullname: `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim(),
-          department: departmentName,
-          program: programName,
+          ...data.studentInfo,
+          fullname: `${data.studentInfo.prefix_th || ''} ${data.studentInfo.first_name_th || ''} ${data.studentInfo.last_name_th || ''}`.trim(),
+          program: data.studentInfo.program_name,
+          department: data.studentInfo.department_name,
         });
-        setAdvisors(advisorList);
+        setAdvisors(data.advisors);
+
       } catch (err) {
         setError(err.message);
+        if (err.message.includes("ล็อกอิน")) navigate('/login');
       } finally {
         setLoading(false);
       }
     };
     loadFormData();
-  }, []);
+  }, [navigate]);
 
   // --- Logic การ Submit ฟอร์ม ---
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const userEmail = localStorage.getItem("current_user");
     
     if (!mainAdvisor) {
       alert("กรุณาเลือกอาจารย์ที่ปรึกษาหลัก");
       return;
     }
-    const signatureData = localStorage.getItem(`${userEmail}_signature_data`);
-    if (!signatureData) {
-      alert("ไม่พบข้อมูลลายเซ็น กรุณาตั้งค่าลายเซ็นก่อน");
-      navigate('/student/signature'); // อาจส่งไปหน้า signature
-      return;
+    if (!currentUser.has_signed) {
+        alert("ไม่พบข้อมูลลายเซ็น กรุณาตั้งค่าลายเซ็นก่อน");
+        navigate('/signature');
+        return;
     }
-
+    
+    // 1. เตรียมข้อมูลที่จะส่งไป Server
     const submissionData = {
-      doc_id: `form1_${userEmail}_${Date.now()}`,
-      type: "ฟอร์ม 1",
-      title: "แบบฟอร์มขอรับรองการเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ หลัก/ร่วม",
-      student_email: userEmail,
-      student_id: studentInfo.student_id,
-      student: studentInfo.fullname,
-      selected_main_advisor_id: mainAdvisor,
-      selected_co_advisor_id: coAdvisor || null,
-      student_comment: comment,
-      submitted_date: new Date().toISOString(),
-      signature: signatureData,
-      status: "รอตรวจ"
+        student_user_id: currentUser.id,
+        main_advisor_id: mainAdvisor,
+        co_advisor_id: coAdvisor || null,
+        student_comment: comment,
     };
 
-    // --- บันทึกข้อมูลลง Local Storage (เหมือนเดิม) ---
-    const existingPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-    existingPendingDocs.push(submissionData);
-    localStorage.setItem('localStorage_pendingDocs', JSON.stringify(existingPendingDocs));
-    
-    alert("✅ ยืนยันและส่งแบบฟอร์มเรียบร้อยแล้ว!");
-    navigate("/student/status"); // ส่งไปหน้า status
+    try {
+        // 2. ส่งข้อมูลไปยัง API
+        const response = await fetch(`${API_URL}/api/submissions/form1`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(submissionData)
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'เกิดข้อผิดพลาดในการส่งฟอร์ม');
+        }
+
+        // 3. เมื่อสำเร็จ แจ้งเตือนและนำทางไปหน้าสถานะ
+        alert("✅ ยืนยันและส่งแบบฟอร์มเรียบร้อยแล้ว!");
+        navigate("/student/status");
+
+    } catch (err) {
+        alert(`❌ เกิดข้อผิดพลาด: ${err.message}`);
+    }
   };
 
   // --- ส่วนแสดงผล ---
@@ -123,7 +134,7 @@ function Form1Page() {
             <select id="main-advisor" required value={mainAdvisor} onChange={(e) => setMainAdvisor(e.target.value)}>
               <option value="">-- กรุณาเลือกอาจารย์ที่ปรึกษาหลัก --</option>
               {advisors.map(adv => (
-                adv.advisor_id && <option key={adv.advisor_id} value={adv.advisor_id}>
+                <option key={adv.advisor_id} value={adv.advisor_id}>
                   {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`.trim()}
                 </option>
               ))}

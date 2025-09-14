@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
+import { useAuth } from '../../context/AuthContext'; // ตรวจสอบว่า import ถูกต้อง
 import logo from '../../assets/images/logo.png';
 
 function LoginPage() {
@@ -8,74 +9,57 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth(); // ดึงฟังก์ชัน login มาจาก Context
+
+  // URL ของ Server API (ควรย้ายไปเก็บในไฟล์ .env ในโปรเจคจริง)
+  const API_URL = 'http://localhost:3000';
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
-    async function fetchAllUsers() {
-      const roles = [
-        { file: "student.json", role: "student" },
-        { file: "admin.json", role: "admin" },
-        { file: "advisor.json", role: "advisor" },
-      ];
-      const allUsers = {};
-      for (const roleItem of roles) {
-        try {
-          const response = await fetch(`/data/${roleItem.file}`);
-          if (response.ok) {
-            const data = await response.json();
-            data.forEach(user => {
-              if (user && typeof user.email === 'string') {
-                allUsers[user.email.toLowerCase()] = { ...user, role: roleItem.role };
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Error processing ${roleItem.file}:`, error);
+    try {
+      // 1. ส่ง Request ไปยัง Server API
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      // 2. รับข้อมูลที่ Server ตอบกลับมา
+      const data = await response.json();
+
+      // 3. ตรวจสอบว่า Server ตอบกลับมาว่าสำเร็จหรือไม่
+      if (!response.ok) {
+        throw new Error(data.message || 'เกิดข้อผิดพลาดในการล็อกอิน');
+      }
+      
+      // --- ล็อกอินสำเร็จ ---
+
+      // 4. เรียกใช้ฟังก์ชัน login จาก Context เพื่อจัดการข้อมูลทั้งหมด
+      // บรรทัดนี้จะทำการบันทึก token, user ลง localStorage และอัปเดต state ส่วนกลาง
+      login(data.user, data.token);
+
+      // 5. นำทางผู้ใช้ไปยังหน้าถัดไป
+      const { role, has_signed } = data.user;
+
+      if (role === 'admin') {
+        navigate('/admin');
+      } else if (role === 'student' || role === 'advisor' || role === 'program_chair') {
+        if (has_signed) {
+          navigate(`/${role}/home`);
+        } else {
+          navigate('/signature');
         }
-      }
-      return allUsers;
-    }
-
-    const users = await fetchAllUsers();
-    const formattedEmail = email.toLowerCase().trim();
-
-    if (!users[formattedEmail]) {
-      setError("❌ ไม่พบบัญชีนี้ในระบบ!");
-      return;
-    }
-
-    if (users[formattedEmail].password !== password) {
-      setError("❌ รหัสผ่านไม่ถูกต้อง!");
-      return;
-    }
-
-  const currentUser = users[formattedEmail];
-    localStorage.setItem("current_user", formattedEmail);
-    localStorage.setItem("role", currentUser.role);
-    const userFullName = `${currentUser.prefix_th || ''}${currentUser.first_name_th || currentUser.fullname || ''} ${currentUser.last_name_th || ''}`.trim();
-    localStorage.setItem("current_user_name", userFullName);
-    localStorage.setItem("student_id", currentUser.student_id);
-
-    const userRole = currentUser.role;
-
-    if (userRole === 'admin') {
-      // ถ้าเป็น Admin ให้ไปหน้าหลักของ Admin เลย
-      navigate('/admin'); 
-    } else if (userRole === 'student' || userRole === 'advisor') {
-      // ถ้าเป็น Student หรือ Advisor ให้เช็คว่าเคยเซ็นชื่อหรือยัง
-      const hasSigned = localStorage.getItem(`${formattedEmail}_signed`) === "true";
-      if (hasSigned) {
-        // ถ้าเคยเซ็นแล้ว ให้ไปหน้า Home ของ Role นั้นๆ
-        navigate(`/${userRole}/home`);
       } else {
-        // ถ้ายังไม่เคยเซ็น ให้ไปหน้าตั้งค่าลายเซ็น
-        navigate('/signature');
+        setError("ไม่สามารถกำหนดหน้าถัดไปสำหรับบทบาทของคุณได้");
       }
-    } else {
-      // สำหรับ Role อื่นๆ ที่อาจมีในอนาคต หรือกรณีที่ไม่ตรงเงื่อนไข
-      setError("ไม่สามารถกำหนดหน้าถัดไปสำหรับบทบาทของคุณได้");
+
+    } catch (err) {
+      setError(`❌ ${err.message}`);
+      console.error('Login failed:', err);
     }
   };
 
@@ -122,4 +106,3 @@ function LoginPage() {
 }
 
 export default LoginPage;
-

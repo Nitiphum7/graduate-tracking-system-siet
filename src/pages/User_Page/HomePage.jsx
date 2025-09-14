@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react'; // <--- แก้ไขบรรทัดนี้
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // เพิ่ม useNavigate
 import styles from './HomePage.module.css';
 
-// --- Card Components ---
+// --- Card Components (ไม่มีการเปลี่ยนแปลง) ---
 function StatusSummaryCard({ counts }) {
   return (
     <div className={styles.dashboardCard}>
       <h3>ภาพรวมเอกสาร</h3>
       <div className={styles.statusBoxes}>
+        <div className={`${styles.box} ${styles.rejected}`}><span>ตีกลับ</span><strong>{counts.rejected}</strong></div>
         <div className={`${styles.box} ${styles.pending}`}><span>กำลังดำเนินการ</span><strong>{counts.pending}</strong></div>
         <div className={`${styles.box} ${styles.approved}`}><span>อนุมัติ</span><strong>{counts.approved}</strong></div>
-        <div className={`${styles.box} ${styles.rejected}`}><span>ตีกลับ</span><strong>{counts.rejected}</strong></div>
       </div>
       <Link to="/student/status" className={styles.viewAllLink}>ดูสถานะเอกสารทั้งหมด →</Link>
     </div>
   );
 }
+
 function QuickLinksCard() {
   return (
     <div className={styles.dashboardCard}>
@@ -29,40 +30,43 @@ function QuickLinksCard() {
     </div>
   );
 }
+
 function NextStepCard({ approvedDocs, rejectedDocs }) {
-  let nextStepContent = null;
-  if (rejectedDocs.length > 0) {
-    nextStepContent = (
-      <div className={`${styles.nextStepBody} ${styles.alert}`}>
-        <span className={styles.actionTitle}>⚠️ มีเอกสารที่ต้องแก้ไข</span>
-        <p>ระบบพบว่าคุณมีเอกสารที่ถูกส่งกลับ ({rejectedDocs.length} รายการ)</p>
-        <Link to="/student/status" className={styles.actionButton}>ไปที่หน้าสถานะเอกสาร</Link>
-      </div>
-    );
-  } else {
-    const hasApproved = (formType) => approvedDocs.some(doc => doc.type === formType);
-    if (!hasApproved('ฟอร์ม 1')) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เลือกอาจารย์ที่ปรึกษา</span><p>ขั้นตอนแรกคือการยื่นแบบฟอร์มเพื่อขอรับรองการเป็นอาจารย์ที่ปรึกษา</p><Link to="/student/form1" className={styles.actionButton}>ไปที่ฟอร์ม 1</Link></div>;
-    } else if (!hasApproved('ฟอร์ม 2')) {
-       nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เสนอหัวข้อวิทยานิพนธ์</span><p>ขั้นตอนต่อไปคือการเสนอหัวข้อและเค้าโครงวิทยานิพนธ์</p><Link to="/student/form2" className={styles.actionButton}>ไปที่ฟอร์ม 2</Link></div>;
-    } 
-    else {
+    let nextStepContent = null;
+    if (rejectedDocs.length > 0) {
       nextStepContent = (
-        <div className={`${styles.nextStepBody} ${styles.done}`}>
-          <span className={styles.actionTitle}>👍 ยอดเยี่ยม!</span>
-          <p>คุณได้ดำเนินการในขั้นตอนสำคัญครบถ้วนแล้ว</p>
-          <Link to="/student/status" className={styles.actionButton}>ดูสถานะเอกสารทั้งหมด</Link>
+        <div className={`${styles.nextStepBody} ${styles.alert}`}>
+          <span className={styles.actionTitle}>⚠️ มีเอกสารที่ต้องแก้ไข</span>
+          <p>ระบบพบว่าคุณมีเอกสารที่ถูกส่งกลับ ({rejectedDocs.length} รายการ)</p>
+          <Link to="/student/status" className={styles.actionButton}>ไปที่หน้าสถานะเอกสาร</Link>
         </div>
       );
+    } else {
+        // แก้ไข: เช็คจาก title ที่มาจาก document_types.type_name
+      const hasApproved = (formName) => approvedDocs.some(doc => doc.title && doc.title.includes(formName));
+      
+      if (!hasApproved('ฟอร์ม 1')) { // เช็คว่าใน title มีคำว่า 'ฟอร์ม 1' หรือไม่
+        nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เลือกอาจารย์ที่ปรึกษา</span><p>ขั้นตอนแรกคือการยื่นแบบฟอร์มเพื่อขอรับรองการเป็นอาจารย์ที่ปรึกษา</p><Link to="/student/form1" className={styles.actionButton}>ไปที่ฟอร์ม 1</Link></div>;
+      } else if (!hasApproved('ฟอร์ม 2')) {
+          nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เสนอหัวข้อวิทยานิพนธ์</span><p>ขั้นตอนต่อไปคือการเสนอหัวข้อและเค้าโครงวิทยานิพนธ์</p><Link to="/student/form2" className={styles.actionButton}>ไปที่ฟอร์ม 2</Link></div>;
+      } 
+      else {
+        nextStepContent = (
+          <div className={`${styles.nextStepBody} ${styles.done}`}>
+            <span className={styles.actionTitle}>👍 ยอดเยี่ยม!</span>
+            <p>คุณได้ดำเนินการในขั้นตอนสำคัญครบถ้วนแล้ว</p>
+            <Link to="/student/status" className={styles.actionButton}>ดูสถานะเอกสารทั้งหมด</Link>
+          </div>
+        );
+      }
     }
+    return (
+      <div className={styles.dashboardCard}>
+        <h3>ขั้นตอนต่อไปของคุณ (Next Step)</h3>
+        {nextStepContent}
+      </div>
+    );
   }
-  return (
-    <div className={styles.dashboardCard}>
-      <h3>ขั้นตอนต่อไปของคุณ (Next Step)</h3>
-      {nextStepContent}
-    </div>
-  );
-}
 
 function RecentActivitiesCard({ documents }) {
   return (
@@ -70,11 +74,12 @@ function RecentActivitiesCard({ documents }) {
       <h3>รายการล่าสุด (Recent Activities)</h3>
       <ul className={styles.recentDocsList}>
         {documents.length > 0 ? (
-          documents.slice(0, 5).map((doc, index) => (
-            <li key={doc.doc_id || index}> {/* ใช้ doc_id เป็น key */}
-              {/* --- ส่วนที่แก้ไข: ใช้ doc.doc_id --- */}
+          documents.slice(0, 5).map((doc) => (
+            <li key={doc.doc_id}>
+              {/* ใช้ doc.doc_id ที่มาจาก document_submissions.id */}
               <Link to={`/student/docs/${doc.doc_id}`} className={styles.docTitle}>{doc.title}</Link>
-              <span className={`${styles.docStatus} ${styles['status-' + doc.status]}`}>{doc.status}</span>
+              {/* ปรับปรุงการแสดงผล status ให้ยืดหยุ่น */}
+              <span className={`${styles.docStatus} ${styles['status-' + doc.status.toLowerCase().replace(/\s+/g, '-')]}`}>{doc.status}</span>
             </li>
           ))
         ) : (
@@ -84,8 +89,12 @@ function RecentActivitiesCard({ documents }) {
     </div>
   );
 }
-// --- Main HomePage Component ---
+
+// --- Main HomePage Component (ส่วนที่แก้ไข) ---
 function HomePage() {
+  const navigate = useNavigate();
+  const API_URL = 'http://localhost:3000';
+
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,55 +102,44 @@ function HomePage() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
+        // 1. ดึงข้อมูลผู้ใช้จาก Local Storage เพื่อเอา ID
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (!storedUser || !storedUser.id) {
+          throw new Error("ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่");
+        }
 
-        const response = await fetch("/data/student.json");
-        const students = await response.json();
+        // 2. เรียก API เพื่อดึงข้อมูล Dashboard ทั้งหมด
+        const response = await fetch(`${API_URL}/api/dashboard/student/${storedUser.id}`);
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้");
+        }
+        const data = await response.json();
         
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
-        
-        const baseDocs = currentUser.documents || [];
-        const newPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]').filter(doc => doc.student_email === userEmail);
-        const allDocuments = [...baseDocs, ...newPendingDocs];
-        
-        const approvedStates = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่านเกณฑ์'];
-        const rejectedStates = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่านเกณฑ์'];
-
-        const approvedDocs = allDocuments.filter(doc => approvedStates.includes(doc.status));
-        const rejectedDocs = allDocuments.filter(doc => rejectedStates.includes(doc.status));
-        const pendingDocs = allDocuments.filter(doc => !approvedStates.includes(doc.status) && !rejectedStates.includes(doc.status));
-        
-        allDocuments.sort((a, b) => new Date(b.submitted_date) - new Date(a.submitted_date));
-
-        setDashboardData({
-          name: `${currentUser.first_name_th} ${currentUser.last_name_th}`,
-          counts: {
-            pending: pendingDocs.length,
-            approved: approvedDocs.length,
-            rejected: rejectedDocs.length,
-          },
-          approvedDocs: approvedDocs,
-          rejectedDocs: rejectedDocs,
-          allDocuments: allDocuments,
-        });
+        // 3. ตั้งค่า State ด้วยข้อมูลจริงจากฐานข้อมูล
+        setDashboardData(data);
 
       } catch (err) {
         setError(err.message);
+        if (err.message.includes("ล็อกอิน")) navigate('/login');
       } finally {
         setLoading(false);
       }
     };
 
     loadDashboard();
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return <div className={styles.loading}>กำลังโหลดข้อมูลแดชบอร์ด...</div>;
   }
   if (error) {
     return <div className={styles.error}>เกิดข้อผิดพลาด: {error}</div>;
+  }
+
+  // ป้องกันกรณีที่ dashboardData ยังเป็น null
+  if (!dashboardData) {
+      return <div className={styles.error}>ไม่สามารถแสดงข้อมูลได้</div>;
   }
 
   return (

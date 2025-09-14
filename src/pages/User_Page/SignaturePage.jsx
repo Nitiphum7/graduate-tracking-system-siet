@@ -11,6 +11,9 @@ function SignaturePage() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
+  // URL ของ Server API (ควรย้ายไปเก็บในไฟล์ .env ในโปรเจคจริง)
+  const API_URL = 'http://localhost:3000';
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -33,36 +36,25 @@ function SignaturePage() {
     }
   };
 
-  // --- ส่วนที่แก้ไข: ปรับปรุง Logic ทั้งหมด ---
-  const submitSignature = () => {
-    // 1. ตรวจสอบข้อมูลที่มีอยู่ โดยเช็ค Canvas อย่างปลอดภัย
+  // --- ส่วนที่แก้ไข: เปลี่ยนมาเรียก API ---
+  const submitSignature = async () => {
     const isImageUploaded = !!uploadedImage;
-    // เช็ค Canvas ก็ต่อเมื่อ ref พร้อมใช้งานแล้วเท่านั้น ถ้าไม่พร้อม ให้ถือว่าว่าง (true)
     const isCanvasEmpty = sigPad.current ? sigPad.current.isEmpty() : true;
 
-    // 2. ตรวจสอบว่ามีข้อมูลอย่างน้อยหนึ่งอย่างหรือไม่
     if (isCanvasEmpty && !isImageUploaded) {
       alert("✍️ กรุณาวาดลายเซ็น หรือ อัปโหลดรูปภาพก่อนบันทึก");
       return;
     }
 
     let signatureData = null;
-    let submissionType = 'signature';
-
-    // 3. กำหนดว่าจะใช้ข้อมูลจากแหล่งไหน (Logic เดิมที่ปรับปรุงแล้ว)
-    //    จัดลำดับความสำคัญตามแท็บที่ผู้ใช้เปิดอยู่
     if (activeTab === 'upload' && isImageUploaded) {
       signatureData = uploadedImage;
-      submissionType = 'image';
     } else if (activeTab === 'draw' && !isCanvasEmpty) {
       signatureData = sigPad.current.toDataURL('image/png');
-      submissionType = 'signature';
-    } else if (isImageUploaded) { // กรณีสำรอง: ถ้าแท็บปัจจุบันว่าง ให้ใช้ข้อมูลจากอีกแท็บ
+    } else if (isImageUploaded) {
       signatureData = uploadedImage;
-      submissionType = 'image';
-    } else if (!isCanvasEmpty) { // กรณีสำรอง: ถ้าแท็บปัจจุบันว่าง ให้ใช้ข้อมูลจากอีกแท็บ
+    } else if (!isCanvasEmpty) {
       signatureData = sigPad.current.toDataURL('image/png');
-      submissionType = 'signature';
     }
 
     if (!signatureData) {
@@ -70,24 +62,45 @@ function SignaturePage() {
       return;
     }
 
-    // 4. บันทึกข้อมูลและไปต่อ
-    const email = localStorage.getItem("current_user");
-    const role = localStorage.getItem("role");
-    if (!email || !role) {
-      alert("⚠️ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
-      navigate('/login');
-      return;
+    try {
+        // 1. ดึงข้อมูล user และ token จาก Local Storage
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('token');
+
+        if (!storedUser || !storedUser.id) {
+            alert("⚠️ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
+            navigate('/login');
+            return;
+        }
+
+        // 2. ส่งข้อมูลลายเซ็นไปยัง Server
+        const response = await fetch(`${API_URL}/api/users/${storedUser.id}/signature`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // ส่ง Token เพื่อยืนยันตัวตน (ถ้ามี)
+            },
+            body: JSON.stringify({ signatureData: signatureData })
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกลายเซ็น');
+        }
+
+        // 3. อัปเดตข้อมูล user ใน Local Storage ให้เป็นปัจจุบัน
+        const updatedUser = { ...storedUser, ...result.data };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        // 4. แจ้งเตือนและนำทางไปยังหน้า Home
+        alert("✅ บันทึกลายเซ็นของคุณเรียบร้อยแล้ว");
+        navigate(`/${storedUser.role}/home`);
+
+    } catch (error) {
+        alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+        console.error("Signature submission failed:", error);
     }
-
-    localStorage.setItem(`${email}_signature_data`, signatureData);
-    localStorage.setItem(`${email}_signed`, "true");
-
-    const alertMessage = submissionType === 'image'
-      ? "✅ รูปภาพของคุณถูกบันทึกแล้ว"
-      : "✅ ลายเซ็นของคุณถูกบันทึกแล้ว";
-    alert(alertMessage);
-
-    navigate(`/${role}/home`);
   };
   // --- จบส่วนที่แก้ไข ---
 

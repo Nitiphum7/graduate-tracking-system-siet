@@ -1,71 +1,64 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './StatusPage.module.css';
 import StatusColumn from '../../components/StatusColumn';
+import { useAuth } from '../../context/AuthContext'; 
 
 function StatusPage() {
+  const { user, loading } = useAuth(); // <-- 1. ดึง loading มาจาก Context ด้วย
+  const navigate = useNavigate();
+  const API_URL = 'http://localhost:3000';
+
   const [documents, setDocuments] = useState({ approved: [], pending: [], rejected: [] });
-  const [loading, setLoading] = useState(true);
+  // แก้ไข: ไม่ต้องมี state loading ของตัวเองแล้ว ใช้จาก Context แทน
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // 3. จะยังไม่ทำอะไรเลยถ้า Context ยังโหลดไม่เสร็จ
+    if (loading) {
+      return; 
+    }
+    // 4. หลังจากโหลดเสร็จแล้ว ค่อยเช็กว่ามี user หรือไม่
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     const loadStatusData = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
+        const response = await fetch(`${API_URL}/api/submissions/student/${user.id}`);
+        if (!response.ok) {
+          throw new Error("ไม่สามารถดึงข้อมูลสถานะเอกสารได้");
+        }
+        const allDocsFromServer = await response.json();
 
-        const response = await fetch("/data/student.json");
-        const students = await response.json();
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
-
-        // 1. ดึงข้อมูลเอกสารพื้นฐานจาก student.json
-        const baseDocs = currentUser.documents || [];
-
-        // --- ส่วนที่แก้ไข: ดึงข้อมูลที่เพิ่งส่งมาจาก localStorage ---
-        // 2. ดึงเอกสารใหม่ที่ถูกบันทึกไว้ใน localStorage
-        const newPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-        // กรองเอาเฉพาะเอกสารของ user ที่ login อยู่
-        const userNewPendingDocs = newPendingDocs.filter(doc => doc.student_email === userEmail);
-        
-        // 3. รวมข้อมูลจากทั้งสองแหล่งเข้าด้วยกัน
-        const allDocs = [...baseDocs, ...userNewPendingDocs];
-        // --- จบส่วนที่แก้ไข ---
-
-
-        // --- ส่วนที่เหลือทำงานเหมือนเดิม ---
-        const approvedStates = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่านเกณฑ์'];
+        // ... (ส่วนจัดกลุ่มเอกสารเหมือนเดิม) ...
+        const approvedStates = ['อนุมัติ', 'ผ่าน', 'อนุมัติแล้ว', 'ผ่านเกณฑ์'];
         const rejectedStates = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่านเกณฑ์'];
-
-        const approved = allDocs.filter(doc => approvedStates.includes(doc.status));
-        const rejected = allDocs.filter(doc => rejectedStates.includes(doc.status));
-        const pending = allDocs.filter(doc => !approvedStates.includes(doc.status) && !rejectedStates.includes(doc.status));
-        
-        const sortByDate = (a, b) => new Date(b.submitted_date || 0) - new Date(a.submitted_date || 0);
-        approved.sort(sortByDate);
-        pending.sort(sortByDate);
-        rejected.sort(sortByDate);
-
+        const approved = allDocsFromServer.filter(doc => approvedStates.includes(doc.status_name));
+        const rejected = allDocsFromServer.filter(doc => rejectedStates.includes(doc.status_name));
+        const pending = allDocsFromServer.filter(doc => !approvedStates.includes(doc.status_name) && !rejectedStates.includes(doc.status_name));
         setDocuments({ approved, pending, rejected });
 
       } catch (err) {
         setError(err.message);
-      } finally {
-        setLoading(false);
       }
     };
-    loadStatusData();
-  }, []);
 
-  if (loading) return <div className={styles.loadingText}>กำลังโหลดข้อมูล...</div>;
+    loadStatusData();
+  }, [user, loading, navigate]); // <-- 5. เพิ่ม loading เข้าไปใน dependency array
+
+  // 2. แสดงสถานะ "กำลังตรวจสอบ" ระหว่างที่ Context กำลังเช็ค localStorage
+  if (loading) return <div className={styles.loadingText}>กำลังตรวจสอบสิทธิ์...</div>;
   if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
 
   return (
     <main className={styles.statusPageContainer}>
       <h1>📄 สถานะเอกสารของคุณ</h1>
       <div className={styles.statusGrid}>
-        <StatusColumn title="✔️ อนุมัติแล้ว" statusType="approved" documents={documents.approved} />
-        <StatusColumn title="⌛ กำลังดำเนินการ" statusType="pending" documents={documents.pending} />
         <StatusColumn title="❌ ไม่อนุมัติ / ต้องแก้ไข" statusType="rejected" documents={documents.rejected} />
+        <StatusColumn title="⌛ กำลังดำเนินการ" statusType="pending" documents={documents.pending} />
+        <StatusColumn title="✔️ อนุมัติแล้ว" statusType="approved" documents={documents.approved} />
       </div>
     </main>
   );
