@@ -1,38 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import styles from './ProfilePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faEdit, faTrash, faUserCircle, faGraduationCap, faSignature, faPaperclip, faPencilAlt, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
 import Cropper from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 import SignaturePad from 'react-signature-pad-wrapper';
 
-// Helper Functions
+// --- Helper Functions ---
 const formatThaiDate = (isoString) => {
     if (!isoString) return '-';
     return new Date(isoString).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 };
+
 const getStatusClass = (status) => {
     if (!status) return styles.pending;
-    const approved = ['สำเร็จการศึกษา', 'อนุมัติแล้ว', 'ผ่าน', 'ผ่านเกณฑ์'];
+    const approved = ['สำเร็จการศึกษา', 'อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'];
     if (approved.includes(status)) return styles.approved;
     const rejected = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่าน', 'ไม่ผ่านเกณฑ์'];
     if (rejected.includes(status)) return styles.rejected;
     return styles.pending;
 };
 
+// --- Main Component ---
 function ProfilePage() {
+    const { user: authUser } = useAuth();
     const [currentUser, setCurrentUser] = useState(null);
     const [processedData, setProcessedData] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const API_URL = 'http://localhost:3000';
+    
+    // UI States
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [phoneInput, setPhoneInput] = useState('');
     const [profileImage, setProfileImage] = useState('/assets/images/placeholder.png');
     const [signatureImage, setSignatureImage] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     
+    // Modal States & Refs
     const [imageToCrop, setImageToCrop] = useState(null);
     const [isCropModalOpen, setCropModalOpen] = useState(false);
     const cropperRef = useRef(null);
-
     const [isSignatureModalOpen, setSignatureModalOpen] = useState(false);
     const [signatureTab, setSignatureTab] = useState('draw');
     const signaturePadRef = useRef(null);
@@ -40,71 +48,80 @@ function ProfilePage() {
 
     useEffect(() => {
         const loadProfileData = async () => {
+            if (!authUser) { setLoading(false); return; }
+
             try {
-                const userEmail = localStorage.getItem("current_user");
-                if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
-
-                const [students, advisors, programs, departments] = await Promise.all([
-                    fetch("/data/student.json").then(res => res.json()),
-                    fetch("/data/advisor.json").then(res => res.json()),
-                    fetch("/data/structures/programs.json").then(res => res.json()),
-                    fetch("/data/structures/departments.json").then(res => res.json()),
+                const [profileRes, advisorsRes, submissionsRes] = await Promise.all([
+                    fetch(`${API_URL}/api/profile/${authUser.id}`),
+                    fetch(`${API_URL}/api/advisors`),
+                    fetch(`${API_URL}/api/submissions/student/${authUser.id}`)
                 ]);
-                
-                const user = students.find(s => s.email === userEmail);
-                if (!user) throw new Error("ไม่พบข้อมูลนักศึกษา");
-                
-                const allUserDocuments = [...(user.documents || []), ...JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]').filter(doc => doc.student_email === userEmail)];
-                const userApprovedDocs = allUserDocuments.filter(doc => doc.status === 'อนุมัติแล้ว' || doc.status === 'อนุมัติ');
 
-                const findAdvisorName = (id) => {
-                    if (!id) return '-';
-                    const advisor = advisors.find(a => a.advisor_id === id);
+                if (!profileRes.ok) throw new Error(`ไม่สามารถดึงข้อมูลโปรไฟล์ได้`);
+                
+                const userProfile = await profileRes.json();
+                const advisors = await advisorsRes.json();
+                const allUserDocuments = await submissionsRes.json();
+                
+                const findAdvisorName = (advisorId) => {
+                    if (!advisorId) return '-';
+                    const advisor = advisors.find(a => a.id === advisorId);
                     return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
                 };
 
-                const approvedForm2 = allUserDocuments.find(doc => doc.type === 'ฟอร์ม 2' && (doc.status === 'อนุมัติแล้ว' || doc.status === 'อนุมัติ'));
-                const approvedEngMasterDoc = allUserDocuments.find(doc => doc.title?.includes("ปริญญาโท") && doc.type === 'ผลสอบภาษาอังกฤษ' && (doc.status === 'อนุมัติแล้ว' || doc.status === 'ผ่านเกณฑ์'));
-                const approvedEngPhdDoc = allUserDocuments.find(doc => doc.title?.includes("ปริญญาเอก") && doc.type === 'ผลสอบภาษาอังกฤษ' && (doc.status === 'อนุมัติแล้ว' || doc.status === 'ผ่านเกณฑ์'));
-                const approvedQEDoc = allUserDocuments.find(doc => doc.type === 'ผลสอบวัดคุณสมบัติ' && (doc.status === 'อนุมัติแล้ว' || doc.status === 'ผ่าน'));
+                const approvedDocs = allUserDocuments.filter(doc => ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'].includes(doc.status_name));
 
-                setCurrentUser(user);
-                setPhoneInput(user.phone || '');
+                const approvedEngMasterDoc = approvedDocs.find(doc => doc.type_name.includes('ป.โท'));
+                const approvedEngPhdDoc = approvedDocs.find(doc => doc.type_name.includes('ป.เอก'));
+                const approvedQEDoc = approvedDocs.find(doc => doc.type_name.includes('วัดคุณสมบัติ'));
+
+                setCurrentUser(userProfile);
+                setPhoneInput(userProfile.phone || '');
+                setSignatureImage(userProfile.signature_image_url ? `${API_URL}${userProfile.signature_image_url}` : null);
+                
+                const savedProfileImg = localStorage.getItem(`${userProfile.email}_profile_image`);
+                if (savedProfileImg) setProfileImage(savedProfileImg);
+
                 setProcessedData({
-                    programName: programs.find(p => p.id === user.program_id)?.name || '-',
-                    departmentName: departments.find(d => d.id === user.department_id)?.name || '-',
-                    mainAdvisorName: findAdvisorName(user.main_advisor_id),
-                    coAdvisor1Name: findAdvisorName(user.co_advisor1_id),
-                    coAdvisor2Name: findAdvisorName(approvedForm2?.committee?.co_advisor2_id),
+                    mainAdvisorName: findAdvisorName(userProfile.main_advisor_id),
+                    coAdvisor1Name: findAdvisorName(userProfile.co_advisor1_id),
+                    coAdvisor2Name: findAdvisorName(userProfile.co_advisor2_id),
                     approvedEngMasterDoc,
                     approvedEngPhdDoc,
                     approvedQEDoc,
-                    allApprovedFiles: userApprovedDocs.flatMap(doc => doc.files ? doc.files.map(file => ({...file, formTitle: doc.title})) : [])
+                    allApprovedFiles: approvedDocs.map(doc => ({ name: doc.type_name, type: 'เอกสารอนุมัติ', formTitle: doc.type_name })),
                 });
-
-                const savedProfileImg = localStorage.getItem(`${userEmail}_profile_image`);
-                if (savedProfileImg) setProfileImage(savedProfileImg);
-                const savedSignatureImg = localStorage.getItem(`${userEmail}_signature_data`);
-                if (savedSignatureImg) setSignatureImage(savedSignatureImg);
 
             } catch (err) {
                 setError(err.message);
-                console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์:", err);
+                console.error("Error loading profile data:", err);
             } finally {
                 setLoading(false);
             }
         };
-        loadProfileData();
-    }, []);
 
-    const handleSavePhone = () => {
-        setCurrentUser(prev => ({ ...prev, phone: phoneInput }));
-        alert("เบอร์โทรศัพท์ถูกบันทึกแล้ว (จำลอง)");
-        setIsEditingPhone(false);
+        loadProfileData();
+    }, [authUser]);
+
+    // --- Event Handlers ---
+    const handleSavePhone = async () => {
+        if (!currentUser) return;
+        try {
+            const response = await fetch(`${API_URL}/api/profile/${currentUser.id}/phone`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phoneInput })
+            });
+            if (!response.ok) throw new Error('ไม่สามารถบันทึกเบอร์โทรศัพท์ได้');
+            setCurrentUser(prev => ({ ...prev, phone: phoneInput }));
+            alert("เบอร์โทรศัพท์ถูกบันทึกแล้ว");
+            setIsEditingPhone(false);
+        } catch (err) {
+            alert(err.message);
+        }
     };
 
     const handleProfilePictureChange = (e) => {
-        e.preventDefault();
         const file = e.target.files[0];
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -118,74 +135,67 @@ function ProfilePage() {
     };
 
     const handleConfirmCrop = () => {
-        if (cropperRef.current?.cropper) {
-            const croppedImageData = cropperRef.current.cropper.getCroppedCanvas({
-                width: 256, height: 256,
-            }).toDataURL('image/png');
+        if (cropperRef.current?.cropper && currentUser) {
+            const croppedImageData = cropperRef.current.cropper.getCroppedCanvas({ width: 256, height: 256 }).toDataURL('image/png');
             setProfileImage(croppedImageData);
-            const userEmail = localStorage.getItem("current_user");
-            localStorage.setItem(`${userEmail}_profile_image`, croppedImageData);
+            localStorage.setItem(`${currentUser.email}_profile_image`, croppedImageData);
             setCropModalOpen(false);
             setImageToCrop(null);
         }
     };
-    
-    const handleSaveSignature = () => {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) return;
+
+    const handleSaveSignature = async () => {
+        if (!currentUser) return;
         let signatureData = null;
         if (signatureTab === 'draw') {
-            if (signaturePadRef.current?.isEmpty()) {
-                alert("กรุณาวาดลายเซ็นของคุณ");
-                return;
-            }
+            if (signaturePadRef.current?.isEmpty()) return alert("กรุณาวาดลายเซ็นของคุณ");
             signatureData = signaturePadRef.current.toDataURL('image/png');
-            finalizeSaveSignature(userEmail, signatureData);
         } else {
             const file = signatureFileInputRef.current?.files[0];
-            if (!file) {
-                alert("กรุณาเลือกไฟล์รูปภาพ");
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                finalizeSaveSignature(userEmail, reader.result);
-            };
-            reader.readAsDataURL(file);
+            if (!file) return alert("กรุณาเลือกไฟล์รูปภาพ");
+            signatureData = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        }
+        try {
+            const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ signatureData })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Server Error');
+            setSignatureImage(`${API_URL}${result.data.signature_image_url}`);
+            alert("บันทึกลายเซ็นใหม่เรียบร้อยแล้ว");
+            setSignatureModalOpen(false);
+        } catch (err) {
+            alert(`เกิดข้อผิดพลาด: ${err.message}`);
         }
     };
 
-    const finalizeSaveSignature = (userEmail, data) => {
-        setSignatureImage(data);
-        localStorage.setItem(`${userEmail}_signature_data`, data);
-        localStorage.setItem(`${userEmail}_signed`, "true");
-        alert("บันทึกลายเซ็นใหม่เรียบร้อยแล้ว");
-        setSignatureModalOpen(false);
-    }
-
-    // --- ✅ นี่คือส่วนที่แก้ไข Logic ---
-    const handleDeleteSignature = () => {
-        if (window.confirm("คุณต้องการลบลายเซ็นดิจิทัลใช่หรือไม่? การลบจะทำให้คุณต้องตั้งค่าลายเซ็นใหม่ทันที")) {
-            const userEmail = localStorage.getItem("current_user");
-            if (userEmail) {
-                localStorage.removeItem(`${userEmail}_signature_data`);
-                localStorage.removeItem(`${userEmail}_signed`);
+    const handleDeleteSignature = async () => {
+        if (window.confirm("คุณต้องการลบลายเซ็นดิจิทัลใช่หรือไม่?")) {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('ไม่สามารถลบลายเซ็นได้');
                 setSignatureImage(null);
-                
-                alert("ลบลายเซ็นเรียบร้อยแล้ว กรุณาตั้งค่าลายเซ็นใหม่เพื่อดำเนินการต่อ");
-                
-                // เปิด Modal แก้ไขลายเซ็นขึ้นมาทันที
-                setSignatureModalOpen(true);
+                alert("ลบลายเซ็นเรียบร้อยแล้ว");
+                setSignatureModalOpen(false);
+            } catch(err) {
+                 alert(`เกิดข้อผิดพลาด: ${err.message}`);
             }
         }
     };
-    // --- จบส่วนที่แก้ไข ---
 
-    if (loading) return <div className={styles.loadingText}>กำลังโหลดข้อมูลโปรไฟล์...</div>;
+    // --- Render Logic ---
+    if (loading) return <div className={styles.loadingText}>กำลังโหลด...</div>;
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
     if (!currentUser) return <div className={styles.loadingText}>ไม่พบข้อมูลผู้ใช้</div>;
 
-    const fullname = `${currentUser.prefix_th} ${currentUser.first_name_th} ${currentUser.last_name_th}`.trim();
+    const fullname = `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim();
 
     return (
         <>
@@ -205,7 +215,7 @@ function ProfilePage() {
                                 </div>
                                 <div className={styles.profileNameGroup}>
                                     <h2>{fullname}</h2>
-                                    <p>รหัสนักศึกษา: {currentUser.student_id}</p>
+                                    <p>รหัสนักศึกษา: {currentUser.student_id || '-'}</p>
                                 </div>
                             </div>
                             <div className={styles.profileDetails}>
@@ -213,10 +223,10 @@ function ProfilePage() {
                                 <div className={styles.detailsGrid}>
                                     <div><label>ระดับการศึกษา:</label><span>{currentUser.degree || '-'}</span></div>
                                     <div><label>แผนการเรียน:</label><span>{currentUser.plan || '-'}</span></div>
-                                    <div><label>หลักสูตร/สาขา:</label><span>{processedData.programName}</span></div>
-                                    <div><label>ภาควิชา:</label><span>{processedData.departmentName}</span></div>
+                                    <div><label>หลักสูตร/สาขา:</label><span>{currentUser.program_name || '-'}</span></div>
+                                    <div><label>ภาควิชา:</label><span>{currentUser.department_name || '-'}</span></div>
                                     <div><label>คณะ:</label><span>{currentUser.faculty || '-'}</span></div>
-                                    <div><label>สถานะ:</label><span className={getStatusClass(currentUser.status)}>{currentUser.status || '-'}</span></div>
+                                    <div><label>สถานะ:</label><span className={getStatusClass(currentUser.status_name)}>{currentUser.status_name || '-'}</span></div>
                                     <div>
                                         <label>เบอร์โทรศัพท์:</label>
                                         <div className={styles.editableField}>
@@ -240,13 +250,13 @@ function ProfilePage() {
                         </section>
                         <section className={styles.profileCard}>
                             <h3><FontAwesomeIcon icon={faSignature} /> ลายเซ็นดิจิทัล</h3>
-                             <div className={styles.signatureDisplayArea}>
-                                {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
-                            </div>
-                            <div className={styles.signatureActions}>
-                                <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
-                                <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
-                            </div>
+                               <div className={styles.signatureDisplayArea}>
+                                 {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
+                               </div>
+                               <div className={styles.signatureActions}>
+                                 <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
+                                 <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature} disabled={!signatureImage}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
+                               </div>
                         </section>
                     </div>
                     {/* --- Right Column --- */}
@@ -263,15 +273,15 @@ function ProfilePage() {
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>รายชื่ออาจารย์ที่ปรึกษาวิทยานิพนธ์</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>อาจารย์ที่ปรึกษาหลัก:</label><span>{processedData.mainAdvisorName}</span></li>
-                                    <li><label>อาจารย์ที่ปรึกษาร่วม 1:</label><span>{processedData.coAdvisor1Name}</span></li>
-                                    <li><label>อาจารย์ที่ปรึกษาร่วม 2:</label><span>{processedData.coAdvisor2Name}</span></li>
+                                    <li><label>อาจารย์ที่ปรึกษาหลัก:</label><span>{processedData.mainAdvisorName || '-'}</span></li>
+                                    <li><label>อาจารย์ที่ปรึกษาร่วม 1:</label><span>{processedData.coAdvisor1Name || '-'}</span></li>
+                                    <li><label>อาจารย์ที่ปรึกษาร่วม 2:</label><span>{processedData.coAdvisor2Name || '-'}</span></li>
                                 </ul>
                             </div>
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบหัวข้อและเค้าโครง</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>วันที่สอบหัวข้อ:</label><span>-</span></li>
+                                    <li><label>วันที่สอบหัวข้อ:</label><span>{formatThaiDate(currentUser.proposal_defense_date)}</span></li>
                                     <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.proposal_status)}>{currentUser.proposal_status || 'ยังไม่ยื่น'}</span></li>
                                     <li><label>วันที่อนุมัติหัวข้อ:</label><span>{formatThaiDate(currentUser.proposal_approval_date)}</span></li>
                                 </ul>
@@ -279,54 +289,55 @@ function ProfilePage() {
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบวิทยานิพนธ์ขั้นสุดท้าย</h4>
                                 <ul className={styles.statusListDetailed}>
-                                     <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
-                                     <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || '-'}</span></li>
-                                     <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
+                                      <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
+                                      <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || 'ยังไม่ยื่น'}</span></li>
+                                      <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
                                 </ul>
                             </div>
-                             <div className={styles.statusGroup}>
+                            <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>ผลการสอบภาษาอังกฤษ ป.โท</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>ประเภทการสอบ:</label><span>{processedData.approvedEngMasterDoc?.details?.exam_type || '-'}</span></li>
-                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedEngMasterDoc?.action_date)}</span></li>
-                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedEngMasterDoc?.status)}>{processedData.approvedEngMasterDoc?.status || 'ยังไม่ยื่น'}</span></li>
+                                    <li><label>ประเภทการสอบ:</label><span>{processedData.approvedEngMasterDoc?.form_details?.exam_type || '-'}</span></li>
+                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedEngMasterDoc?.submission_date)}</span></li>
+                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedEngMasterDoc?.status_name)}>{processedData.approvedEngMasterDoc?.status_name || 'ยังไม่ยื่น'}</span></li>
                                 </ul>
                             </div>
-                             <div className={styles.statusGroup}>
+                            <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>ผลการสอบภาษาอังกฤษ ป.เอก</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>ประเภทการสอบ:</label><span>{processedData.approvedEngPhdDoc?.details?.exam_type || '-'}</span></li>
-                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedEngPhdDoc?.action_date)}</span></li>
-                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedEngPhdDoc?.status)}>{processedData.approvedEngPhdDoc?.status || 'ยังไม่ยื่น'}</span></li>
+                                    <li><label>ประเภทการสอบ:</label><span>{processedData.approvedEngPhdDoc?.form_details?.exam_type || '-'}</span></li>
+                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedEngPhdDoc?.submission_date)}</span></li>
+                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedEngPhdDoc?.status_name)}>{processedData.approvedEngPhdDoc?.status_name || 'ยังไม่ยื่น'}</span></li>
                                 </ul>
                             </div>
-                             <div className={styles.statusGroup}>
+                            <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>ผลการสอบวัดคุณสมบัติ</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedQEDoc?.action_date)}</span></li>
-                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedQEDoc?.status)}>{processedData.approvedQEDoc?.status || 'ยังไม่ยื่น'}</span></li>
+                                    <li><label>วันที่อนุมัติผลสอบ:</label><span>{formatThaiDate(processedData.approvedQEDoc?.submission_date)}</span></li>
+                                    <li><label>สถานะ:</label><span className={getStatusClass(processedData.approvedQEDoc?.status_name)}>{processedData.approvedQEDoc?.status_name || 'ยังไม่ยื่น'}</span></li>
                                 </ul>
                             </div>
-                         </section>
-                         <section className={styles.profileCard}>
+                        </section>
+                        <section className={styles.profileCard}>
                             <h3><FontAwesomeIcon icon={faPaperclip} /> เอกสารแนบในระบบ (ที่อนุมัติแล้ว)</h3>
-                             <ul className={styles.fileList}>
+                            <ul className={styles.fileList}>
                                 {processedData.allApprovedFiles && processedData.allApprovedFiles.length > 0 ? (
                                     processedData.allApprovedFiles.map((file, index) => (
                                         <li key={index}>
-                                            <label>{file.type} <span className={styles.textMuted}>(จาก: {file.formTitle})</span></label>
+                                            <label>{file.formTitle}</label>
                                             <a href="#" onClick={(e) => e.preventDefault()}>{file.name}</a>
                                         </li>
                                     ))
                                 ) : (
                                     <li className={styles.loadingText}>ยังไม่มีเอกสารแนบที่อนุมัติแล้ว</li>
                                 )}
-                             </ul>
-                         </section>
+                            </ul>
+                        </section>
                     </div>
                 </div>
             </main>
 
+            {/* --- Modals --- */}
             {isCropModalOpen && (
                 <div className={styles.modalOverlay}>
                     <div className={`${styles.modalBox} ${styles.cropModalBox}`}>
@@ -336,11 +347,8 @@ function ProfilePage() {
                                 ref={cropperRef}
                                 src={imageToCrop}
                                 style={{ height: 400, width: '100%' }}
-                                aspectRatio={1 / 1}
+                                aspectRatio={1}
                                 viewMode={1}
-                                background={false}
-                                responsive={true}
-                                checkOrientation={false}
                                 guides={true}
                             />
                         </div>
@@ -354,13 +362,13 @@ function ProfilePage() {
             
             {isSignatureModalOpen && (
                 <div className={styles.modalOverlay}>
-                     <div className={`${styles.modalBox} ${styles.signatureModalBox}`}>
-                         <h3>แก้ไขลายเซ็นดิจิทัล</h3>
-                         <div className={styles.tabNav}>
-                             <button className={`${styles.tabBtn} ${signatureTab === 'draw' ? styles.active : ''}`} onClick={() => setSignatureTab('draw')}>วาดลายเซ็น</button>
-                             <button className={`${styles.tabBtn} ${signatureTab === 'upload' ? styles.active : ''}`} onClick={() => setSignatureTab('upload')}>อัปโหลด</button>
-                         </div>
-                         <div className={styles.tabContent}>
+                    <div className={`${styles.modalBox} ${styles.signatureModalBox}`}>
+                        <h3>แก้ไขลายเซ็นดิจิทัล</h3>
+                        <div className={styles.tabNav}>
+                            <button className={`${styles.tabBtn} ${signatureTab === 'draw' ? styles.active : ''}`} onClick={() => setSignatureTab('draw')}>วาดลายเซ็น</button>
+                            <button className={`${styles.tabBtn} ${signatureTab === 'upload' ? styles.active : ''}`} onClick={() => setSignatureTab('upload')}>อัปโหลด</button>
+                        </div>
+                        <div className={styles.tabContent}>
                             {signatureTab === 'draw' && (
                                 <div className={styles.canvasWrapper}>
                                     <SignaturePad 
@@ -378,27 +386,27 @@ function ProfilePage() {
                                     <input type="file" id="signature-upload-input" ref={signatureFileInputRef} accept="image/*" style={{display: 'none'}} />
                                 </div>
                             )}
-                         </div>
-                         <div className={styles.modalActionsStacked}>
-                             <div className={styles.mainActions}>
+                        </div>
+                        <div className={styles.modalActionsStacked}>
+                            <div className={styles.mainActions}>
                                 <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={() => setSignatureModalOpen(false)}>ยกเลิก</button>
                                 <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSaveSignature}>บันทึก</button>
-                             </div>
-                             <div className={styles.secondaryActions}>
+                            </div>
+                            <div className={styles.secondaryActions}>
                                 <button className={styles.btnText} onClick={() => {
                                     if (signatureTab === 'draw' && signaturePadRef.current) {
                                         signaturePadRef.current.clear();
-                                    } else {
-                                        if (signatureFileInputRef.current) signatureFileInputRef.current.value = null;
+                                    } else if (signatureFileInputRef.current) {
+                                        signatureFileInputRef.current.value = null;
                                     }
                                 }}>ล้าง</button>
-                             </div>
-                         </div>
-                     </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </>
     );
 }
 
-export default ProfilePage; 
+export default ProfilePage;

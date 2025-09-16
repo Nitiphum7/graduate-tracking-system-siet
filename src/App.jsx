@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute'; 
 
 // --- Layouts ---
 import UserLayout from './layouts/UserLayout'; 
@@ -29,10 +30,17 @@ function App() {
       {/* --- Public Routes --- */}
       <Route path="/" element={<Navigate replace to="/login" />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/signature" element={<SignaturePage />} />
+      <Route path="/signature" element={<ProtectedRoute>
+          <SignaturePage />
+        </ProtectedRoute>
+      } />
 
       {/* --- Student Protected Routes (all under UserLayout) --- */}
-      <Route path="/student" element={<UserLayout />}>
+      <Route path="/student" element={
+        <ProtectedRoute>
+          <UserLayout />
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate replace to="home" />} /> 
         <Route path="home" element={<HomePage />} />
         <Route path="status" element={<StatusPage />} />

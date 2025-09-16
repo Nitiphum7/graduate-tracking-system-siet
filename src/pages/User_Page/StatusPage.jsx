@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './StatusPage.module.css';
 import StatusColumn from '../../components/StatusColumn';
-import { useAuth } from '../../context/AuthContext'; 
+import { useAuth } from '../../hooks/useAuth.js'; 
 
 function StatusPage() {
   const { user, loading } = useAuth(); // <-- 1. ดึง loading มาจาก Context ด้วย

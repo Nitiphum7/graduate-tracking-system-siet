@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
-import { useAuth } from '../../context/AuthContext'; // ตรวจสอบว่า import ถูกต้อง
+import { useAuth } from '../../hooks/useAuth.js'; // ตรวจสอบว่า import ถูกต้อง
 import logo from '../../assets/images/logo.png';
 
 function LoginPage() {

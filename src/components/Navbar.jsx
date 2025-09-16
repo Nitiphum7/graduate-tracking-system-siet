@@ -3,7 +3,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import styles from './Navbar.module.css';
 import logo from '../assets/images/logo.png'; // ตรวจสอบ Path ของ logo ให้ถูกต้อง
 
-import { useAuth } from '../context/AuthContext'; // <-- 1. Import useAuth เข้ามา
+import { useAuth } from '../hooks/useAuth'; // <-- 1. Import useAuth เข้ามา
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
