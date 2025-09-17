@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import styles from '../User_Page/DocumentDetailPage.module.css'; // ใช้ CSS ร่วมกัน
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 // นำเข้า Component แสดงผลของนักศึกษาทั้งหมด
 import Form1Detail from '../../components/document-details/Form1Detail';
@@ -13,7 +15,8 @@ import Form6Detail from '../../components/document-details/Form6Detail';
 import ExamResultDetail from '../../components/document-details/ExamResultDetail';
 
 // นำเข้าการ์ดดำเนินการของ Admin
-import AdminActionCard from '../../components/admin/AdminActionCard';
+import AdminActionPanel from '../../components/admin/AdminActionPanel';
+import WorkflowTimeline from '../../components/admin/WorkflowTimeline';
 
 // ✅✅✅ --- แก้ไข "สารบัญ" ตรงนี้ --- ✅✅✅
 // แก้ไข Key ให้ตรงกับ type_name ในฐานข้อมูล (ลบ "(Form ...)" ออก)
@@ -29,6 +32,7 @@ const detailComponentMap = {
   'ยื่นผลการสอบวัดคุณสมบัติ (QE)': ExamResultDetail,
 };
 
+// --- Component หลักของหน้า ---
 function AdminDocumentDetailPage() {
     const { docId } = useParams();
     const navigate = useNavigate();

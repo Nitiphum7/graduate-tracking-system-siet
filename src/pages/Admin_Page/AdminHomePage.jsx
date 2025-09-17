@@ -106,6 +106,13 @@ const PendingReviewSection = ({ pendingDocs, stats }) => {
     );
 };
 
+ const PlaceholderSection = ({ title, icon }) => (
+     <section className={styles.contentSection}>
+         <h1><FontAwesomeIcon icon={icon} /> {title}</h1>
+         <p>เนื้อหาสำหรับส่วน "{title}" จะแสดงผลที่นี่</p>
+     </section>
+ );
+
 // --- Component หลัก ---
 function AdminHomePage() {
     const [dashboardData, setDashboardData] = useState({
