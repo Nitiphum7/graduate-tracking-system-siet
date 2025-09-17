@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import styles from '../User_Page/DocumentDetailPage.module.css'; // ใช้ CSS ร่วมกัน
 
 // นำเข้า Component แสดงผลของนักศึกษาทั้งหมด
@@ -14,97 +15,116 @@ import ExamResultDetail from '../../components/document-details/ExamResultDetail
 // นำเข้าการ์ดดำเนินการของ Admin
 import AdminActionCard from '../../components/admin/AdminActionCard';
 
+// ✅✅✅ --- แก้ไข "สารบัญ" ตรงนี้ --- ✅✅✅
+// แก้ไข Key ให้ตรงกับ type_name ในฐานข้อมูล (ลบ "(Form ...)" ออก)
 const detailComponentMap = {
-  'ฟอร์ม 1': Form1Detail,
-  'ฟอร์ม 2': Form2Detail,
-  'ฟอร์ม 3': Form3Detail,
-  'ฟอร์ม 4': Form4Detail,
-  'ฟอร์ม 5': Form5Detail,
-  'ฟอร์ม 6': Form6Detail,
-  'ผลสอบภาษาอังกฤษ': ExamResultDetail,
-  'ผลสอบวัดคุณสมบัติ': ExamResultDetail,
+  'แบบฟอร์มขอรับรองการเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ หลัก/ร่วม': Form1Detail,
+  'แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์': Form2Detail,
+  'แบบนำส่งเอกสารหัวข้อและเค้าโครงวิทยานิพนธ์ 1 เล่ม': Form3Detail,
+  'แบบขอหนังสือเชิญเป็นผู้ทรงคุณวุฒิตรวจและประเมินคุณภาพของผลงานทางวิชาการ': Form4Detail,
+  'แบบขอหนังสือขออนุญาตเก็บรวบรวมข้อมูล': Form5Detail,
+  'บันทึกข้อความ เรื่อง ขอแต่งตั้งคณะกรรมการ': Form6Detail,
+  'ยื่นผลการทดสอบความสามารถทางภาษาอังกฤษ (ป.โท)': ExamResultDetail,
+  'ยื่นผลการทดสอบความสามารถทางภาษาอังกฤษ (ป.เอก)': ExamResultDetail,
+  'ยื่นผลการสอบวัดคุณสมบัติ (QE)': ExamResultDetail,
 };
 
 function AdminDocumentDetailPage() {
-  const { docId } = useParams();
-  const navigate = useNavigate();
-  const [docData, setDocData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const { docId } = useParams();
+    const navigate = useNavigate();
+    const { user: adminUser } = useAuth();
+    const [docData, setDocData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const API_URL = 'http://localhost:3000';
 
-  useEffect(() => {
-    const loadDocumentData = async () => {
+    useEffect(() => {
+        const loadDocumentData = async () => {
+            if (!docId) return;
+            setLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/api/submissions/${docId}`);
+                if (!response.ok) {
+                    throw new Error("ไม่สามารถโหลดข้อมูลเอกสารได้");
+                }
+                const data = await response.json();
+                
+                const formattedData = {
+                    document: data.documentDetail,
+                    user: data.documentDetail,
+                    advisors: data.advisors,
+                };
+                setDocData(formattedData);
+            } catch (err) {
+                setError(err.message);
+                console.error("Error fetching document details:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadDocumentData();
+    }, [docId]);
+
+    const handleAction = async (action, adminComment) => {
+        if (!adminUser) {
+            alert("ไม่พบข้อมูลแอดมิน, กรุณาล็อกอินใหม่");
+            return;
+        }
         try {
-            const studentsRes = await fetch('/data/student.json');
-            const students = await studentsRes.json();
-            const pendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-            
-            let allDocs = [];
-            students.forEach(s => { if(s.documents) allDocs.push(...s.documents) });
-            allDocs = [...allDocs, ...pendingDocs];
-
-            const document = allDocs.find(d => d.doc_id === docId);
-            if (!document) throw new Error("ไม่พบเอกสาร");
-            
-            const studentUser = students.find(s => s.email === document.student_email);
-            if (!studentUser) throw new Error("ไม่พบข้อมูลนักศึกษาเจ้าของเอกสาร");
-
-            const [advisors, programs, departments] = await Promise.all([
-                fetch("/data/advisor.json").then(res => res.json()),
-                fetch("/data/structures/programs.json").then(res => res.json()),
-                fetch("/data/structures/departments.json").then(res => res.json()),
-            ]);
-
-            setDocData({
-                document,
-                user: { ...studentUser, fullname: `${studentUser.prefix_th} ${studentUser.first_name_th} ${studentUser.last_name_th}`.trim() },
-                allUserDocs: allDocs.filter(d => d.student_email === studentUser.email),
-                advisors, programs, departments
+            const response = await fetch(`${API_URL}/api/submissions/${docId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status_name: action,
+                    admin_comment: adminComment,
+                    actor_user_id: adminUser.id
+                })
             });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || "เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+            }
+
+            alert(`ดำเนินการ "${action}" สำเร็จ!`);
+            navigate('/admin/home');
+
         } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
+            alert(`เกิดข้อผิดพลาด: ${err.message}`);
+            console.error("Failed to update document status:", err);
         }
     };
-    loadDocumentData();
-  }, [docId]);
 
-  const handleAction = (action, adminComment) => {
-    alert(`ดำเนินการ: ${action}\nความคิดเห็น: ${adminComment}\n(จำลองการทำงาน)`);
-    // ในอนาคต: อัปเดตสถานะใน localStorage และฐานข้อมูล
-    navigate('/admin/home');
-  };
+    if (loading) return <div>กำลังโหลดข้อมูลเอกสาร...</div>;
+    if (error) return <div>เกิดข้อผิดพลาด: {error}</div>;
+    if (!docData) return <div>ไม่พบข้อมูล</div>;
 
-  if (loading) return <div>กำลังโหลด...</div>;
-  if (error) return <div>เกิดข้อผิดพลาด: {error}</div>;
+    const { document, user, ...restData } = docData;
+    const DetailComponent = detailComponentMap[document.type_name];
 
-  const { document, user, ...restData } = docData;
-  const DetailComponent = detailComponentMap[document.type];
-
-  return (
-    <main className={styles.detailContainer}>
-      <div className={styles.documentContent}>
-        <div className={styles.contentHeader}>
-          <h1>{document.title}</h1>
-        </div>
-        <div className={styles.detailCard}>
-          {DetailComponent ? (
-            <DetailComponent doc={document} user={user} {...restData} />
-          ) : (
-            <p>ไม่มี Component สำหรับแสดงผลเอกสารประเภทนี้</p>
-          )}
-        </div>
-      </div>
-      <aside className={styles.documentSidebar}>
-        <AdminActionCard onAction={handleAction} />
-        <div className={styles.detailCard}>
-             <h3>ความคิดเห็น (จากผู้ยื่น)</h3>
-             <p className={styles.commentBox}>{document.student_comment || 'ไม่มี'}</p>
-        </div>
-      </aside>
-    </main>
-  );
+    return (
+        <main className={styles.detailContainer}>
+            <div className={styles.documentContent}>
+                <div className={styles.contentHeader}>
+                    <h1>{document.type_name}</h1>
+                </div>
+                <div className={styles.detailCard}>
+                    {DetailComponent ? (
+                        <DetailComponent doc={document} user={user} {...restData} />
+                    ) : (
+                        <p>ไม่มี Component สำหรับแสดงผลเอกสารประเภท: {document.type_name}</p>
+                    )}
+                </div>
+            </div>
+            <aside className={styles.documentSidebar}>
+                <AdminActionCard onAction={handleAction} currentStatus={document.status_name} />
+                <div className={styles.detailCard}>
+                    <h3>ความคิดเห็น (จากผู้ยื่น)</h3>
+                    <p className={styles.commentBox}>{document.student_comment || 'ไม่มี'}</p>
+                </div>
+            </aside>
+        </main>
+    );
 }
 
 export default AdminDocumentDetailPage;

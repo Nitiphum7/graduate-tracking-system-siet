@@ -43,7 +43,7 @@ function LoginPage() {
       login(data.user, data.token);
 
       // 5. นำทางผู้ใช้ไปยังหน้าถัดไป
-      const { role, has_signed } = data.user;
+      const { role_name: role, has_signed } = data.user;
 
       if (role === 'admin') {
         navigate('/admin');
