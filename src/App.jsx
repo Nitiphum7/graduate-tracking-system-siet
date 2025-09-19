@@ -22,7 +22,8 @@ import Form5Page from './pages/User_Page/Form5Page';
 import Form6Page from './pages/User_Page/Form6Page';
 import ExamSubmitPage from './pages/User_Page/ExamSubmitPage';
 import ProfilePage from './pages/User_Page/ProfilePage';
-import GuidePage from './pages/User_Page/GuidePage'; // ✅ 1. Import GuidePage เข้ามา
+import GuidePage from './pages/User_Page/GuidePage';
+import TemplatesPage from './pages/User_Page/TemplatesPage'; // ✅ 1. Import TemplatesPage เข้ามา
 
 // --- Admin Pages ---
 import AdminHomePage from './pages/Admin_Page/AdminHomePage';
@@ -60,7 +61,11 @@ function App() {
         <Route path="form6" element={<Form6Page />} />
         <Route path="exam-submit" element={<ExamSubmitPage />} />
         <Route path="docs/:docId" element={<DocumentDetailPage />} />
-        <Route path="guide" element={<GuidePage />} /> {/* ✅ 2. เพิ่ม Route ของ guide เข้าไป */}
+        <Route path="guide" element={<GuidePage />} />
+        
+        {/* ✅ 2. เพิ่ม Route ของ templates เข้าไปที่นี่ */}
+        <Route path="templates" element={<TemplatesPage />} />
+
       </Route>
       
       {/* --- Admin Routes (Nested under AdminLayout) --- */}

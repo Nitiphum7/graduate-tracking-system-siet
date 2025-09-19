@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import styles from './Form2Page.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheckCircle, faTimes } from '@fortawesome/free-solid-svg-icons'; // เปลี่ยน faTimesCircle เป็น faTimes
+import { faCheckCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
 
-// วางฟังก์ชันนี้ไว้ด้านบนสุดของไฟล์ Form2Page.jsx
 const fileToDataUrl = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -16,6 +16,9 @@ const fileToDataUrl = (file) => {
 
 function Form2Page() {
   const navigate = useNavigate();
+  const { user: currentUser, loading: authLoading } = useAuth();
+  const API_URL = 'http://localhost:3000';
+
   const [studentInfo, setStudentInfo] = useState(null);
   const [advisorLists, setAdvisorLists] = useState({
     mainAdvisorName: '', coAdvisor1Name: '', potentialChairs: [],
@@ -28,59 +31,39 @@ function Form2Page() {
     committeeMember5: '', reserveExternal: '', reserveInternal: '',
     registrationSemester: '', registrationYear: '', comment: '',
     files: {
-      proposalFile_th: null,
-      proposalFile_en: null,
-      coverPageFile_th: null,
-      coverPageFile_en: null,
-      registrationProofFile: null,
+      proposalFile_th: null, proposalFile_en: null, coverPageFile_th: null,
+      coverPageFile_en: null, registrationProofFile: null,
     },
   });
 
   useEffect(() => {
-    const loadFormData = async () => {
+    if (authLoading) return;
+    if (!currentUser) {
+        navigate('/login');
+        return;
+    }
+
+    const loadPageData = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
-
-        const [students, allAdvisors, programs, departments] = await Promise.all([
-          fetch("/data/student.json").then(res => res.json()),
-          fetch("/data/advisor.json").then(res => res.json()),
-          fetch("/data/structures/programs.json").then(res => res.json()),
-          fetch("/data/structures/departments.json").then(res => res.json())
-        ]);
-
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
+        const response = await fetch(`${API_URL}/api/forms/form2-data/${currentUser.id}`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || "ไม่สามารถดึงข้อมูลสำหรับฟอร์ม 2 ได้");
+        }
         
-        const programName = programs.find(p => p.id === currentUser.program_id)?.name || '';
-        const departmentName = departments.find(d => d.id === currentUser.department_id)?.name || '';
-        const fullname = `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim();
-        setStudentInfo({ ...currentUser, programName, departmentName, fullname });
+        const data = await response.json();
+        setStudentInfo(data.studentInfo);
+        setAdvisorLists(data.advisorLists);
 
-        const mainAdvisor = allAdvisors.find(a => a.advisor_id === currentUser.main_advisor_id);
-        const coAdvisor1 = allAdvisors.find(a => a.advisor_id === currentUser.co_advisor1_id);
-        const mainAdvisorName = mainAdvisor ? `${mainAdvisor.prefix_th}${mainAdvisor.first_name_th} ${mainAdvisor.last_name_th}`.trim() : 'ไม่มีข้อมูล';
-        const coAdvisor1Name = coAdvisor1 ? `${coAdvisor1.prefix_th}${coAdvisor1.first_name_th} ${coAdvisor1.last_name_th}`.trim() : 'ไม่มีข้อมูล';
-        
-        const usedAdvisorIds = [currentUser.main_advisor_id, currentUser.co_advisor1_id].filter(Boolean);
-        const internalAdvisors = allAdvisors.filter(a => a.type !== 'อาจารย์บัณฑิตพิเศษภายนอก');
-        const externalAdvisors = allAdvisors.filter(a => a.type === 'อาจารย์บัณฑิตพิเศษภายนอก');
-
-        setAdvisorLists({
-          mainAdvisorName, coAdvisor1Name,
-          potentialChairs: internalAdvisors.filter(a => a.roles?.includes("สอบ") && !usedAdvisorIds.includes(a.advisor_id)),
-          potentialCoAdvisors2: internalAdvisors.filter(a => a.roles?.includes("ที่ปรึกษาวิทยานิพนธ์ร่วม") && !usedAdvisorIds.includes(a.advisor_id)),
-          internalMembers: internalAdvisors.filter(a => !usedAdvisorIds.includes(a.advisor_id)),
-          externalMembers: externalAdvisors,
-        });
       } catch (err) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-    loadFormData();
-  }, []);
+    
+    loadPageData();
+  }, [currentUser, authLoading, navigate]);
 
   const handleChange = (e) => {
     const { id, value, name } = e.target;
@@ -97,89 +80,75 @@ function Form2Page() {
       }));
     }
   };
+  
+  const handleRemoveFile = (fileName) => {
+      setFormData(prev => ({
+          ...prev,
+          files: { ...prev.files, [fileName]: null }
+      }));
+  };
 
- // ✅✅✅ แทนที่ handleSubmit เดิมทั้งหมดด้วยโค้ดนี้ ✅✅✅
   const handleSubmit = async (e) => {
      e.preventDefault();
-     const userEmail = localStorage.getItem("current_user");
 
-     if (!formData.files.proposalFile_th || !formData.files.proposalFile_en ||
-         !formData.files.coverPageFile_th || !formData.files.coverPageFile_en ||
-         !formData.files.registrationProofFile) {
+     if (Object.values(formData.files).some(file => file === null)) {
          alert("กรุณาแนบไฟล์ประกอบให้ครบถ้วนทุกช่อง");
          return;
      }
 
-    try {
-      // --- 🔽 ส่วนที่เพิ่มเข้ามา: แปลงไฟล์ทั้งหมดเป็น Data URL 🔽 ---
-      const filePromises = [
-        fileToDataUrl(formData.files.proposalFile_th),
-        fileToDataUrl(formData.files.proposalFile_en),
-        fileToDataUrl(formData.files.coverPageFile_th),
-        fileToDataUrl(formData.files.coverPageFile_en),
-        fileToDataUrl(formData.files.registrationProofFile)
-      ];
+     try {
+        setLoading(true);
+        const filePromises = Object.values(formData.files).map(file => fileToDataUrl(file));
+        const fileUrls = await Promise.all(filePromises);
 
-      // รอให้ทุกไฟล์แปลงเสร็จ
-      const fileUrls = await Promise.all(filePromises);
-      // --- จบส่วนที่เพิ่มเข้ามา ---
+        const submissionData = {
+          student_user_id: currentUser.id,
+          thesis_title_th: formData.thesisTitleTh,
+          thesis_title_en: formData.thesisTitleEn,
+          committee: {
+            chair_id: formData.committeeChair,
+            co_advisor2_id: formData.coAdvisor2,
+            member5_id: formData.committeeMember5,
+            reserve_external_id: formData.reserveExternal,
+            reserve_internal_id: formData.reserveInternal,
+          },
+          files: [
+            { type: 'ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์ (ไทย)', name: formData.files.proposalFile_th.name, url: fileUrls[0] },
+            { type: 'ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์ (อังกฤษ)', name: formData.files.proposalFile_en.name, url: fileUrls[1] },
+            { type: 'ไฟล์หน้าปกของหัวข้อและเค้าโครง (ไทย)', name: formData.files.coverPageFile_th.name, url: fileUrls[2] },
+            { type: 'ไฟล์หน้าปกของหัวข้อและเค้าโครง (อังกฤษ)', name: formData.files.coverPageFile_en.name, url: fileUrls[3] },
+            { type: 'ไฟล์สำเนาการลงทะเบียนภาคการศึกษาล่าสุด', name: formData.files.registrationProofFile.name, url: fileUrls[4] }
+          ],
+          details: {
+            registration_semester: formData.registrationSemester,
+            registration_year: formData.registrationYear,
+          },
+          student_comment: formData.comment,
+        };
+        
+        const response = await fetch(`${API_URL}/api/submissions/form2`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submissionData),
+        });
+        
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || "เกิดข้อผิดพลาดในการส่งฟอร์ม");
+        }
 
+        alert("✅ ยืนยันและส่งแบบฟอร์มเสนอหัวข้อเรียบร้อยแล้ว!");
+        navigate("/student/status");
 
-      const formPrefix = "Form2";
-      const timestamp = Date.now(); // ดึงตัวเลขเวลาปัจจุบัน
-      const newDocId = `${formPrefix}-${timestamp}`; // นำมาต่อกันเพื่อให้ไม่ซ้ำ
-
-      const submissionData = {
-        doc_id: newDocId, 
-        type: "ฟอร์ม 2",
-        title: "แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์", 
-        student_email: userEmail,
-        student_id: studentInfo.student_id, 
-        thesis_title_th: formData.thesisTitleTh,
-        thesis_title_en: formData.thesisTitleEn,
-        committee: {
-          chair_id: formData.committeeChair, 
-          co_advisor2_id: formData.coAdvisor2,
-          member5_id: formData.committeeMember5, 
-          reserve_external_id: formData.reserveExternal,
-          reserve_internal_id: formData.reserveInternal,
-        },
-        // --- 🔽 ส่วนที่แก้ไข: เพิ่ม property 'url' เข้าไป 🔽 ---
-        files: [
-            { type: 'เค้าโครงวิทยานิพนธ์ (ไทย)', name: formData.files.proposalFile_th.name, url: fileUrls[0] },
-            { type: 'เค้าโครงวิทยานิพนธ์ (อังกฤษ)', name: formData.files.proposalFile_en.name, url: fileUrls[1] },
-            { type: 'หน้าปก (ไทย)', name: formData.files.coverPageFile_th.name, url: fileUrls[2] },
-            { type: 'หน้าปก (อังกฤษ)', name: formData.files.coverPageFile_en.name, url: fileUrls[3] },
-            { type: 'สำเนาลงทะเบียน', name: formData.files.registrationProofFile.name, url: fileUrls[4] }
-        ],
-        // --- จบส่วนที่แก้ไข ---
-        details: {
-          registration_semester: formData.registrationSemester,
-          registration_year: formData.registrationYear,
-        },
-        student_comment: formData.comment, 
-        submitted_date: new Date().toISOString(),
-        status: "รอตรวจ"
-      };
-
-      // ✅✅✅ เพิ่มบรรทัดนี้เข้าไป ก่อน localStorage.setItem ✅✅✅
-      console.log("ข้อมูลที่จะถูกบันทึก:", submissionData);
-
-      const existingPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-      existingPendingDocs.push(submissionData);
-      localStorage.setItem('localStorage_pendingDocs', JSON.stringify(existingPendingDocs));
-      
-      alert("✅ ยืนยันและส่งแบบฟอร์มเสนอหัวข้อเรียบร้อยแล้ว!");
-      navigate("/student/status");
-
-    } catch (error) {
-        console.error("Error converting files to Data URL:", error);
-        alert("เกิดข้อผิดพลาดในการประมวลผลไฟล์แนบ กรุณาลองใหม่อีกครั้ง");
-    }
+     } catch (error) {
+        console.error("Form 2 submission error:", error);
+        alert(`เกิดข้อผิดพลาด: ${error.message}`);
+     } finally {
+        setLoading(false);
+     }
   };
 
-
-  if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูล...</div>;
+  if (loading || authLoading) return <div className={styles.loading}>กำลังโหลดข้อมูล...</div>;
   if (error) return <div className={styles.error}>เกิดข้อผิดพลาด: {error}</div>;
 
   const currentThaiYear = new Date().getFullYear() + 543;
@@ -197,8 +166,8 @@ function Form2Page() {
             <div><label>ระดับปริญญา:</label><input type="text" value={studentInfo?.degree || ''} disabled /></div>
           </div>
           <div className={styles.infoGrid}>
-            <div><label>หลักสูตรและสาขาวิชา:</label><input type="text" value={studentInfo?.programName || ''} disabled /></div>
-            <div><label>ภาควิชา:</label><input type="text" value={studentInfo?.departmentName || ''} disabled /></div>
+            <div><label>หลักสูตรและสาขาวิชา:</label><input type="text" value={studentInfo?.program_name || ''} disabled /></div>
+            <div><label>ภาควิชา:</label><input type="text" value={studentInfo?.department_name || ''} disabled /></div>
           </div>
         </fieldset>
         
@@ -268,10 +237,10 @@ function Form2Page() {
             </div>
         </fieldset>
 
+        {/* ✅✅✅ SECTION ที่ขาดหายไป ถูกเพิ่มกลับเข้ามาที่นี่ ✅✅✅ */}
         <fieldset>
           <legend>📎 แนบเอกสารประกอบ</legend>
 
-          {/* --- ✅ ส่วนที่แก้ไข: เงื่อนไขการเปลี่ยนสี --- */}
           <div className={`${styles.subSection} ${formData.files.proposalFile_th && formData.files.proposalFile_en ? styles.attached : ''}`}>
             <label>1. ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์* (.pdf, .docx)</label>
             <div className={styles.fileGroup}>
@@ -279,46 +248,30 @@ function Form2Page() {
                     <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
                     <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_TH_DD-MM-YYYY.pdf</small>
                     <div className={styles.fileInputWrapper}>
-                        <label htmlFor="proposalFile_th" className={styles.fileInputLabel}>
-                            {formData.files.proposalFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
-                        </label>
-                        <input type="file" id="proposalFile_th" name="proposalFile_th" onChange={handleFileChange} />
+                        <label htmlFor="proposalFile_th" className={styles.fileInputLabel}>{formData.files.proposalFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="proposalFile_th" name="proposalFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
                         {formData.files.proposalFile_th ? (
                             <div className={styles.fileInfo}>
                                 <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <a href={URL.createObjectURL(formData.files.proposalFile_th)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
-                                    {formData.files.proposalFile_th.name}
-                                </a>
-                                <button type="button" onClick={() => handleRemoveFile('proposalFile_th')} className={styles.removeFileBtn}>
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
+                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_th.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('proposalFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
                             </div>
-                        ) : (
-                            <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
-                        )}
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
                     </div>
                 </div>
                 <div className={styles.fileInputSubgroup}>
                     <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
                     <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_EN_DD-MM-YYYY.pdf</small>
-                     <div className={styles.fileInputWrapper}>
-                        <label htmlFor="proposalFile_en" className={styles.fileInputLabel}>
-                            {formData.files.proposalFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
-                        </label>
-                        <input type="file" id="proposalFile_en" name="proposalFile_en" onChange={handleFileChange} />
+                    <div className={styles.fileInputWrapper}>
+                        <label htmlFor="proposalFile_en" className={styles.fileInputLabel}>{formData.files.proposalFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="proposalFile_en" name="proposalFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
                         {formData.files.proposalFile_en ? (
                             <div className={styles.fileInfo}>
                                 <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <a href={URL.createObjectURL(formData.files.proposalFile_en)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
-                                    {formData.files.proposalFile_en.name}
-                                </a>
-                                <button type="button" onClick={() => handleRemoveFile('proposalFile_en')} className={styles.removeFileBtn}>
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
+                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_en.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('proposalFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
                             </div>
-                        ) : (
-                            <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
-                        )}
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
                     </div>
                 </div>
             </div>
@@ -331,46 +284,30 @@ function Form2Page() {
                     <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
                     <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_TH_DDMMYYYY.pdf</small>
                     <div className={styles.fileInputWrapper}>
-                        <label htmlFor="coverPageFile_th" className={styles.fileInputLabel}>
-                            {formData.files.coverPageFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
-                        </label>
-                        <input type="file" id="coverPageFile_th" name="coverPageFile_th" onChange={handleFileChange} />
+                        <label htmlFor="coverPageFile_th" className={styles.fileInputLabel}>{formData.files.coverPageFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="coverPageFile_th" name="coverPageFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
                         {formData.files.coverPageFile_th ? (
-                             <div className={styles.fileInfo}>
+                            <div className={styles.fileInfo}>
                                 <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <a href={URL.createObjectURL(formData.files.coverPageFile_th)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
-                                    {formData.files.coverPageFile_th.name}
-                                </a>
-                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_th')} className={styles.removeFileBtn}>
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
+                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_th.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
                             </div>
-                        ) : (
-                            <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
-                        )}
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
                     </div>
                 </div>
                 <div className={styles.fileInputSubgroup}>
                     <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
                     <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_EN_DDMMYYYY.pdf</small>
                     <div className={styles.fileInputWrapper}>
-                        <label htmlFor="coverPageFile_en" className={styles.fileInputLabel}>
-                             {formData.files.coverPageFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
-                        </label>
-                        <input type="file" id="coverPageFile_en" name="coverPageFile_en" onChange={handleFileChange} />
+                        <label htmlFor="coverPageFile_en" className={styles.fileInputLabel}>{formData.files.coverPageFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="coverPageFile_en" name="coverPageFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
                         {formData.files.coverPageFile_en ? (
-                             <div className={styles.fileInfo}>
+                            <div className={styles.fileInfo}>
                                 <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <a href={URL.createObjectURL(formData.files.coverPageFile_en)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
-                                    {formData.files.coverPageFile_en.name}
-                                </a>
-                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_en')} className={styles.removeFileBtn}>
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
+                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_en.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
                             </div>
-                        ) : (
-                            <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
-                        )}
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
                     </div>
                 </div>
             </div>
@@ -391,24 +328,15 @@ function Form2Page() {
               </select>
             </div>
             <div className={styles.fileInputWrapper}>
-              <label htmlFor="registrationProofFile" className={styles.fileInputLabel}>
-                {formData.files.registrationProofFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
-              </label>
-              <input type="file" id="registrationProofFile" name="registrationProofFile" onChange={handleFileChange} />
-              
+              <label htmlFor="registrationProofFile" className={styles.fileInputLabel}>{formData.files.registrationProofFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+              <input type="file" id="registrationProofFile" name="registrationProofFile" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg"/>
               {formData.files.registrationProofFile ? (
                 <div className={styles.fileInfo}>
                   <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                  <a href={URL.createObjectURL(formData.files.registrationProofFile)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
-                    {formData.files.registrationProofFile.name}
-                  </a>
-                  <button type="button" onClick={() => handleRemoveFile('registrationProofFile')} className={styles.removeFileBtn}>
-                    <FontAwesomeIcon icon={faTimes} />
-                  </button>
+                  <span className={styles.fileNameDisplay}>{formData.files.registrationProofFile.name}</span>
+                  <button type="button" onClick={() => handleRemoveFile('registrationProofFile')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
                 </div>
-              ) : (
-                <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
-              )}
+              ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
             </div>
           </div>
         </fieldset>
@@ -437,4 +365,3 @@ function Form2Page() {
 }
 
 export default Form2Page;
-

@@ -24,10 +24,9 @@ function Navbar() {
 
         switch (user.role_name) {
             case 'student':
-                // ✅ นำเมนูของนักศึกษาฉบับเต็มมาใส่ที่นี่
                 return (
                     <ul className={styles.navLinks}>
-                        <li><NavLink to={`/${user.role_name}/home`} className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
+                        <li><NavLink to="/student/home" className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
                         <li><NavLink to="/student/status" className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faFileAlt} /> สถานะเอกสาร</NavLink></li>
                         
                         <li className={styles.dropdown}>
@@ -60,11 +59,12 @@ function Navbar() {
                         <li><NavLink to="/admin/users" className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faUsersCog} /> จัดการผู้ใช้งาน</NavLink></li>
                     </ul>
                 );
+            // ✅ Handles other roles like 'advisor', 'program_chair' etc.
             default:
                 return (
                      <ul className={styles.navLinks}>
-                        <li><NavLink to={`/${user.role_name}/home`} className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
-                    </ul>
+                         <li><NavLink to={`/${user.role_name}/home`} className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
+                     </ul>
                 );
         }
     }
@@ -74,6 +74,7 @@ function Navbar() {
             <Link to={user ? `/${user.role_name}/home` : '/login'} className={styles.logoLink}>
                 <div className={styles.logo}>
                     <img src={logo} alt="KMITL Logo" />
+                    {/* ✅ Display role in title for clarity during development */}
                     <span>Graduate Tracking System {user ? `(${user.role_name})` : ''}</span>
                 </div>
             </Link>
@@ -96,8 +97,9 @@ function Navbar() {
                         <ul className={`${styles.dropdownMenu} ${styles.userDropdownMenu}`}>
                             <li className={styles.userInfoHeader}>
                                 <div className={styles.infoDetail}>
-                                    <strong>{user.role_name === 'student' ? 'รหัสนักศึกษา:' : 'ประเภท:'}</strong>
-                                    <span>{user.student_id || user.role_name}</span>
+                                    {/* ✅ Improved logic to show relevant ID */}
+                                    <strong>{user.role_name === 'student' ? 'รหัสนักศึกษา:' : 'Role:'}</strong>
+                                    <span>{user.student_id || user.advisor_id || user.role_name}</span>
                                 </div>
                                 <div className={styles.infoDetail}>
                                     <strong>ชื่อ-นามสกุล:</strong>
@@ -105,12 +107,13 @@ function Navbar() {
                                 </div>
                             </li>
                             <li className={styles.dropdownDivider}></li>
+                            {/* ✅ Dynamic link to profile page based on role */}
                             <li><Link to={`/${user.role_name}/profile`}><FontAwesomeIcon icon={faUserEdit} /> จัดการโปรไฟล์</Link></li>
                             <li><a href="#" onClick={handleLogout}><FontAwesomeIcon icon={faSignOutAlt} /> ออกจากระบบ</a></li>
                         </ul>
                     </>
                 ) : (
-                    <Link to="/login" className={styles.loginLink}>เข้าสู่ระบบ</Link>
+                    <Link to="/login" className={styles.loginLink}>Login</Link>
                 )}
             </div>
         </nav>

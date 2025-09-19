@@ -1,52 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
-import { useAuth } from '../../hooks/useAuth.js'; // ตรวจสอบว่า import ถูกต้อง
+import { useAuth } from '../../hooks/useAuth.js';
 import logo from '../../assets/images/logo.png';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // เพิ่ม State สำหรับ Loading
   const navigate = useNavigate();
-  const { login } = useAuth(); // ดึงฟังก์ชัน login มาจาก Context
-
-  // URL ของ Server API (ควรย้ายไปเก็บในไฟล์ .env ในโปรเจคจริง)
+  const { login } = useAuth();
   const API_URL = 'http://localhost:3000';
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true); // เริ่ม Loading
 
     try {
-      // 1. ส่ง Request ไปยัง Server API
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
-      // 2. รับข้อมูลที่ Server ตอบกลับมา
       const data = await response.json();
 
-      // 3. ตรวจสอบว่า Server ตอบกลับมาว่าสำเร็จหรือไม่
       if (!response.ok) {
         throw new Error(data.message || 'เกิดข้อผิดพลาดในการล็อกอิน');
       }
       
-      // --- ล็อกอินสำเร็จ ---
-
-      // 4. เรียกใช้ฟังก์ชัน login จาก Context เพื่อจัดการข้อมูลทั้งหมด
-      // บรรทัดนี้จะทำการบันทึก token, user ลง localStorage และอัปเดต state ส่วนกลาง
       login(data.user, data.token);
 
-      // 5. นำทางผู้ใช้ไปยังหน้าถัดไป
       const { role_name: role, has_signed } = data.user;
 
       if (role === 'admin') {
-        navigate('/admin');
+        navigate('/admin/home');
       } else if (role === 'student' || role === 'advisor' || role === 'program_chair') {
         if (has_signed) {
           navigate(`/${role}/home`);
@@ -60,6 +50,8 @@ function LoginPage() {
     } catch (err) {
       setError(`❌ ${err.message}`);
       console.error('Login failed:', err);
+    } finally {
+      setIsSubmitting(false); // หยุด Loading
     }
   };
 
@@ -71,7 +63,6 @@ function LoginPage() {
           <h1>Graduate Student Tracking System</h1>
           <p>เข้าสู่ระบบด้วยบัญชี <strong>@kmitl.ac.th</strong> เท่านั้น</p>
           <form onSubmit={handleLogin} className={styles.loginForm}>
-            
             <div className={styles.inputGroup}>
               <label htmlFor="email">Email สถาบัน</label>
               <input
@@ -83,7 +74,6 @@ function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-
             <div className={styles.inputGroup}>
               <label htmlFor="password">รหัสผ่าน</label>
               <input
@@ -95,8 +85,10 @@ function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-
-            <button type="submit">🚀 เข้าสู่ระบบ</button>
+            {/* ✅ เปลี่ยนปุ่มให้แสดงสถานะ Loading */}
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'กำลังเข้าสู่ระบบ...' : '🚀 เข้าสู่ระบบ'}
+            </button>
             {error && <p className={styles.errorMsg}>{error}</p>}
           </form>
         </div>

@@ -1,11 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react'; // แก้ไข: เพิ่ม useMemo
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './AdminHomePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import PaginationControls from '../../components/admin/PaginationControls';
 import { faInbox, faCheckCircle, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 
-// --- Component ย่อยสำหรับ "เอกสารรอตรวจ" ---
+// ฟังก์ชันผู้ช่วยนี้จะกำหนดคลาส CSS สำหรับสีของสถานะ
+const getStatusClass = (status, styles) => {
+  if (!status) return styles.pending;
+  const lowerCaseStatus = status.toLowerCase();
+  if (lowerCaseStatus.includes('อนุมัติ') || lowerCaseStatus.includes('ผ่าน')) {
+    return styles.approved;
+  }
+  if (lowerCaseStatus.includes('ไม่อนุมัติ') || lowerCaseStatus.includes('ตีกลับ')) {
+    return styles.rejected;
+  }
+  return styles.pending;
+};
+
+// --- คอมโพเนนต์ลูกสำหรับตารางเอกสารที่รอดำเนินการ ---
 const PendingReviewSection = ({ pendingDocs, stats }) => {
     const [filterBy, setFilterBy] = useState('title');
     const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +47,7 @@ const PendingReviewSection = ({ pendingDocs, stats }) => {
     }, [pendingDocs, searchTerm, filterBy, sortConfig]);
 
     useEffect(() => {
-        setCurrentPage(1); // Reset to page 1 on new filter/search
+        setCurrentPage(1); // กลับไปหน้า 1 เมื่อมีการกรอง/ค้นหาใหม่
     }, [searchTerm, filterBy]);
     
     const requestSort = (key) => {
@@ -90,7 +103,11 @@ const PendingReviewSection = ({ pendingDocs, stats }) => {
                                     <td>{doc.title}</td>
                                     <td>{doc.studentName}</td>
                                     <td>{new Date(doc.submitted_date).toLocaleDateString('th-TH')}</td>
-                                    <td><span className={`${styles.status} ${styles.pending}`}>{doc.status}</span></td>
+                                    <td>
+                                        <span className={`${styles.status} ${getStatusClass(doc.status, styles)}`}>
+                                            {doc.status}
+                                        </span>
+                                    </td>
                                 </tr>
                             )) : (
                                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>ไม่มีเอกสารรอตรวจในขณะนี้</td></tr>
@@ -106,36 +123,27 @@ const PendingReviewSection = ({ pendingDocs, stats }) => {
     );
 };
 
- const PlaceholderSection = ({ title, icon }) => (
-     <section className={styles.contentSection}>
-         <h1><FontAwesomeIcon icon={icon} /> {title}</h1>
-         <p>เนื้อหาสำหรับส่วน "{title}" จะแสดงผลที่นี่</p>
-     </section>
- );
-
-// --- Component หลัก ---
+// --- คอมโพเนนต์หลัก ---
 function AdminHomePage() {
     const [dashboardData, setDashboardData] = useState({
         stats: { pendingAdmin: 0, totalDocs: 0 },
         pendingDocs: [],
-        activities: [],
     });
     const [loading, setLoading] = useState(true);
-    const API_URL = 'http://localhost:3000'; // ควรย้ายไปไฟล์ config
+    const API_URL = 'http://localhost:3000';
 
-    // ✅✅✅ --- แก้ไข useEffect ให้ไปดึงข้อมูลจาก Server --- ✅✅✅
     useEffect(() => {
         const loadAdminData = async () => {
             setLoading(true);
             try {
                 const response = await fetch(`${API_URL}/api/admin/dashboard`);
                 if (!response.ok) {
-                    throw new Error("ไม่สามารถดึงข้อมูลแดชบอร์ดแอดมินได้");
+                    throw new Error("ไม่สามารถดึงข้อมูลแดชบอร์ดของแอดมินได้");
                 }
                 const data = await response.json();
                 setDashboardData(data);
             } catch (error) {
-                console.error("Failed to load admin data:", error);
+                console.error("ล้มเหลวในการโหลดข้อมูลแอดมิน:", error);
             } finally {
                 setLoading(false);
             }
@@ -145,7 +153,6 @@ function AdminHomePage() {
 
     if (loading) return <div>กำลังโหลดข้อมูล...</div>;
 
-    // ส่งข้อมูลที่ได้จาก API ไปให้ Component ย่อย
     return (
         <div>
             <PendingReviewSection 

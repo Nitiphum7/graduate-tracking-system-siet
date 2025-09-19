@@ -1,75 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import styles from './Form3Page.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
 
+// Helper function to convert file to Base64 Data URL
+const fileToDataUrl = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 function Form3Page() {
   const navigate = useNavigate();
+  const { user: currentUser, loading: authLoading } = useAuth();
+  const API_URL = 'http://localhost:3000';
 
   const [displayData, setDisplayData] = useState(null);
-  // ไม่ต้องใช้ programChairs แล้ว
-  // const [programChairs, setProgramChairs] = useState([]);
-  
   const [formData, setFormData] = useState({
-    // programChair ไม่ต้องมีในนี้แล้ว เพราะเราจะดึงมาแสดงผลอย่างเดียว
     outlineFile: null,
     comment: '',
   });
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadFormData = async () => {
+    if (authLoading) return;
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    const loadPageData = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
-
-        const [students, allAdvisors, programs, departments] = await Promise.all([
-          fetch("/data/student.json").then(res => res.json()),
-          fetch("/data/advisor.json").then(res => res.json()),
-          fetch("/data/structures/programs.json").then(res => res.json()),
-          fetch("/data/structures/departments.json").then(res => res.json()),
-        ]);
-
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
-
-        const baseDocs = currentUser.documents || [];
-        const newPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]').filter(doc => doc.student_email === userEmail);
-        const allUserDocuments = [...baseDocs, ...newPendingDocs];
-
-        const approvedForm2 = allUserDocuments.find(doc => doc.type === 'ฟอร์ม 2' && (doc.status === 'อนุมัติแล้ว' || doc.status === 'อนุมัติ'));
-        
-        const placeholder = "ยังไม่มีข้อมูล (รอฟอร์ม 2 อนุมัติ)";
-        
-        const findAdvisorName = (id) => {
-            if (!id) return placeholder;
-            const advisor = allAdvisors.find(a => a.advisor_id === id);
-            return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : 'ไม่มีข้อมูล';
-        };
-
-        // --- ✅ ส่วนที่แก้ไข: ดึงข้อมูลประธานกรรมการสอบจากฟอร์ม 2 ---
-        const programChairId = approvedForm2?.committee?.chair_id;
-        const programChairName = findAdvisorName(programChairId);
-
-        setDisplayData({
-          fullname: `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim(),
-          student_id: currentUser.student_id,
-          degree: currentUser.degree,
-          programName: programs.find(p => p.id === currentUser.program_id)?.name || '',
-          departmentName: departments.find(d => d.id === currentUser.department_id)?.name || '',
-          proposal_approval_date: approvedForm2?.action_date,
-          thesis_title_th: approvedForm2?.thesis_title_th || placeholder,
-          thesis_title_en: approvedForm2?.thesis_title_en || placeholder,
-          mainAdvisorName: findAdvisorName(currentUser.main_advisor_id),
-          coAdvisor1Name: findAdvisorName(currentUser.co_advisor1_id),
-          coAdvisor2Name: findAdvisorName(approvedForm2?.committee?.co_advisor2_id),
-          programChairId: programChairId, // เก็บ ID ไว้เพื่อใช้ตอน Submit
-          programChairName: programChairName, // เก็บชื่อไว้เพื่อแสดงผล
-        });
-        // --- จบส่วนที่แก้ไข ---
+        const response = await fetch(`${API_URL}/api/forms/form3-data/${currentUser.id}`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || "ไม่สามารถดึงข้อมูลสำหรับฟอร์ม 3 ได้");
+        }
+        const data = await response.json();
+        setDisplayData(data);
 
       } catch (err) {
         setError(err.message);
@@ -77,8 +51,10 @@ function Form3Page() {
         setLoading(false);
       }
     };
-    loadFormData();
-  }, []);
+    
+    loadPageData();
+  }, [currentUser, authLoading, navigate]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -94,52 +70,73 @@ function Form3Page() {
   
   const handleRemoveFile = (fileName) => {
     setFormData(prev => ({ ...prev, [fileName]: null }));
-    document.getElementById(fileName).value = "";
+    if (document.getElementById(fileName)) {
+        document.getElementById(fileName).value = "";
+    }
   };
 
-  const handleSubmit = (e) => {
+  // ✅✅✅ นี่คือ handleSubmit ที่แก้ไขแล้ว ✅✅✅
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const userEmail = localStorage.getItem("current_user");
 
-    // --- ✅ ส่วนที่แก้ไข: ตรวจสอบว่ามีข้อมูลประธานหลักสูตรหรือไม่ ---
     if (!formData.outlineFile) {
       alert("กรุณาแนบไฟล์เค้าโครงวิทยานิพนธ์");
       return;
     }
-    // --- จบส่วนที่แก้ไข ---
+    if (!displayData?.isForm2Approved) {
+      alert("ไม่สามารถยื่นฟอร์ม 3 ได้ เนื่องจากฟอร์ม 2 ของคุณยังไม่ได้รับการอนุมัติ");
+      return;
+    }
 
-    const formPrefix = "Form3"; // กำหนดรหัสย่อของฟอร์มนี้ เช่น F1, F2, F3
-    const newDocId = `${formPrefix}`;
-    const submissionData = {
-      doc_id: newDocId,
-      type: "ฟอร์ม 3",
-      title: "แบบนำส่งเอกสารหัวข้อและเค้าโครงวิทยานิพนธ์ 1 เล่ม",
-      student_email: userEmail,
-      student_id: displayData.student_id,
-      files: [{ type: 'เค้าโครงวิทยานิพนธ์ฉบับสมบูรณ์', name: formData.outlineFile.name }],
-      student_comment: formData.comment,
-      submitted_date: new Date().toISOString(),
-      status: "รอตรวจ",
-      approvers: {
-        program_chair_id: displayData.programChairId, // <-- ใช้ ID ที่ดึงมา
-      }
-    };
+    try {
+        setLoading(true);
+        const fileUrl = await fileToDataUrl(formData.outlineFile);
 
-    const existingPendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-    existingPendingDocs.push(submissionData);
-    localStorage.setItem('localStorage_pendingDocs', JSON.stringify(existingPendingDocs));
-    
-    alert("✅ ยืนยันและนำส่งเอกสารเรียบร้อยแล้ว!");
-    navigate("/student/status");
+        const submissionData = {
+          student_user_id: currentUser.id,
+          files: [{ 
+            type: 'เค้าโครงวิทยานิพนธ์ฉบับสมบูรณ์', 
+            name: formData.outlineFile.name,
+            url: fileUrl // ส่งไฟล์ในรูปแบบ Data URL
+          }],
+          student_comment: formData.comment,
+          // ส่ง ID ของประธานกรรมการสอบที่ได้มาจาก Form 2 กลับไป
+          approvers: {
+            program_chair_id: displayData.programChairId,
+          }
+        };
+
+        // --- เปลี่ยนจากการใช้ localStorage มาเป็น fetch ---
+        const response = await fetch(`${API_URL}/api/submissions/form3`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submissionData),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || "เกิดข้อผิดพลาดในการส่งฟอร์ม");
+        }
+
+        alert("✅ ยืนยันและนำส่งเอกสารเรียบร้อยแล้ว!");
+        navigate("/student/status");
+
+    } catch (error) {
+        console.error("Form 3 submission error:", error);
+        alert(`เกิดข้อผิดพลาด: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
   };
 
-  if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูล...</div>;
+  if (loading || authLoading) return <div className={styles.loading}>กำลังโหลดข้อมูล...</div>;
   if (error) return <div className={styles.error}>เกิดข้อผิดพลาด: {error}</div>;
 
   return (
     <div className={styles.formContainer}>
       <h2>📑 แบบนำส่งเอกสารหัวข้อและเค้าโครงวิทยานิพนธ์ 1 เล่ม</h2>
       <form onSubmit={handleSubmit}>
+        {/* ... JSX ทั้งหมดของฟอร์มจะเหมือนเดิม ... */}
         <fieldset>
           <legend>📌 ข้อมูลนักศึกษา</legend>
           <div className={styles.infoGrid}>
@@ -173,7 +170,6 @@ function Form3Page() {
 
         <fieldset>
           <legend>👨‍🏫 อาจารย์ผู้รับผิดชอบ</legend>
-          {/* --- ✅ ส่วนที่แก้ไข: เปลี่ยน Dropdown เป็น Input Disabled --- */}
           <div className={styles.formGroup}>
             <label htmlFor="programChair">ประธานกรรมการสอบ (จากฟอร์ม 2)</label>
             <input 
@@ -183,7 +179,6 @@ function Form3Page() {
               disabled 
             />
           </div>
-          {/* --- จบส่วนที่แก้ไข --- */}
           <div className={`${styles.infoGrid} ${styles.threeCols}`}>
             <div><label>อาจารย์ที่ปรึกษาหลัก:</label><input type="text" value={displayData?.mainAdvisorName || ''} disabled /></div>
             <div><label>อาจารย์ที่ปรึกษาร่วม 1:</label><input type="text" value={displayData?.coAdvisor1Name || ''} disabled /></div>
@@ -200,13 +195,13 @@ function Form3Page() {
               <label htmlFor="outlineFile" className={styles.fileInputLabel}>
                 {formData.outlineFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
               </label>
-              <input type="file" id="outlineFile" name="outlineFile" onChange={handleFileChange} />
+              <input type="file" id="outlineFile" name="outlineFile" onChange={handleFileChange} required accept=".pdf,.doc,.docx" />
               {formData.outlineFile ? (
                 <div className={styles.fileInfo}>
                   <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                  <a href={URL.createObjectURL(formData.outlineFile)} target="_blank" rel="noopener noreferrer" className={styles.fileNameDisplay}>
+                  <span className={styles.fileNameDisplay}>
                     {formData.outlineFile.name}
-                  </a>
+                  </span>
                   <button type="button" onClick={() => handleRemoveFile('outlineFile')} className={styles.removeFileBtn}>
                     <FontAwesomeIcon icon={faTimes} />
                   </button>
@@ -234,8 +229,8 @@ function Form3Page() {
             <div className={styles.charCounter}>{formData.comment.length} / 250</div>
           </div>
         </fieldset>
-
-        <button type="submit">📤 ยืนยันและส่งแบบฟอร์ม</button>
+        
+        <button type="submit" disabled={!displayData?.isForm2Approved}>📤 ยืนยันและส่งแบบฟอร์ม</button>
       </form>
     </div>
   );

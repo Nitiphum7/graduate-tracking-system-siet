@@ -64,10 +64,11 @@ function ProfilePage() {
                 const allUserDocuments = await submissionsRes.json();
                 
                 const findAdvisorName = (advisorId) => {
-                    if (!advisorId) return '-';
-                    const advisor = advisors.find(a => a.id === advisorId);
-                    return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
-                };
+    if (!advisorId) return '-';
+    // ✅ แก้ไขตรงนี้ให้เทียบกับ `advisor_id`
+    const advisor = advisors.find(a => a.advisor_id === advisorId);
+    return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
+};
 
                 const approvedDocs = allUserDocuments.filter(doc => ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'].includes(doc.status_name));
 

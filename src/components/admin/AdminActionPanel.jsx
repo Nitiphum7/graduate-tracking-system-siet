@@ -1,10 +1,23 @@
 import React from 'react';
-import styles from './AdminActionPanel.module.css'; // ✅ 1. นำเข้า CSS ใหม่
+import styles from './AdminActionPanel.module.css';
 
 function AdminActionPanel({ document, onAction }) {
   
+  // ตรวจสอบก่อนว่า document มีข้อมูลหรือไม่ เพื่อป้องกัน error
+  if (!document) {
+    return (
+      <div className={styles.actionCard}>
+        <h3>การดำเนินการ</h3>
+        <div className={styles.actionBody}>
+          <p className={styles.waitingInfo}>กำลังรอข้อมูลเอกสาร...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderActions = () => {
-    switch (document.status) {
+    // ✅✅✅ แก้ไข: ใช้ .status_name ให้ตรงกับข้อมูลจาก API
+    switch (document.status_name) {
       case 'รอตรวจ':
         return (
           <div className={styles.actionBody}>
@@ -16,8 +29,7 @@ function AdminActionPanel({ document, onAction }) {
               <button 
                 onClick={() => {
                     const reason = prompt("กรุณาใส่เหตุผลในการส่งกลับ (ถ้ามี):");
-                    // ดำเนินการต่อแม้ไม่มีเหตุผล แต่จะดีกว่าถ้าบังคับใส่
-                    if (reason !== null) { // prompt returns null if cancelled
+                    if (reason !== null) { 
                       onAction('ส่งกลับแก้ไข', reason);
                     }
                 }} 
@@ -38,7 +50,7 @@ function AdminActionPanel({ document, onAction }) {
       default:
         return (
           <div className={styles.actionBody}>
-            <p className={styles.waitingInfo}>เอกสารนี้ดำเนินการเสร็จสิ้นแล้ว</p>
+            <p className={styles.waitingInfo}>สถานะปัจจุบัน: {document.status_name}</p>
           </div>
         );
     }
