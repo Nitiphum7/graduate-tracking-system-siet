@@ -36,44 +36,70 @@ function DocumentDetailPage() {
     const [error, setError] = useState(null);
     const API_URL = 'http://localhost:3000';
 
-    useEffect(() => {
-        if (authLoading || !loggedInUser) {
-            if (!loggedInUser && !authLoading) setError("กรุณาล็อกอินเพื่อดูข้อมูล");
-            return;
-        }
+  useEffect(() => {
+    const loadDocumentDetail = async () => {
+      try {
+        if (!docId) throw new Error("ไม่พบ ID ของเอกสารใน URL");
 
-        const loadDocumentDetail = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(`${API_URL}/api/submissions/${docId}`);
-                if (!response.ok) {
-                    throw new Error("ไม่สามารถดึงข้อมูลเอกสารได้");
-                }
-                const data = await response.json();
-                
-                // --- ✅ DEBUG LOG 1: ดูข้อมูลทั้งหมดที่ได้รับจาก API ---
-                console.log("Data received from API:", data);
+        const userEmail = localStorage.getItem("current_user");
+        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
 
-                setDocData({ 
-                    document: {
-                        ...data.documentDetail.form_details,
-                        ...data.documentDetail
-                    }, 
-                    user: data.documentDetail,
-                    advisors: data.advisors,
-                    studentProfile: data.studentProfile
-                });
+        const response = await fetch("/data/student.json");
+        const students = await response.json();
+        const currentUser = students.find(s => s.email === userEmail);
+        if(!currentUser) throw new Error("ไม่พบข้อมูลผู้ใช้ปัจจุบันในระบบ");
 
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+        // ✅✅✅ ส่วนที่แก้ไข: ดึงข้อมูลจาก localStorage ทุกส่วน ✅✅✅
+        const baseDocs = currentUser.documents || [];
+        // 1. ดึงข้อมูลจากทุก "ตู้" ใน localStorage
+        const pendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
+        const approvedDocs = JSON.parse(localStorage.getItem('localStorage_approvedDocs') || '[]');
+        const rejectedDocs = JSON.parse(localStorage.getItem('localStorage_rejectedDocs') || '[]');
+        const waitingAdvisorDocs = JSON.parse(localStorage.getItem('localStorage_waitingAdvisorDocs') || '[]');
         
-        loadDocumentDetail();
+        // 2. รวมเอกสารทั้งหมดจาก localStorage และกรองเฉพาะของ User คนปัจจุบัน
+        const allLocalStorageDocs = [
+            ...pendingDocs, 
+            ...approvedDocs, 
+            ...rejectedDocs, 
+            ...waitingAdvisorDocs
+        ].filter(doc => doc.student_email === userEmail);
 
-    }, [docId, loggedInUser, authLoading]);
+        // 3. รวมเอกสารทั้งหมดจากทุกแหล่ง
+        const allUserDocuments = [...baseDocs, ...allLocalStorageDocs];
+        const uniqueUserDocuments = Array.from(new Map(allUserDocuments.map(doc => [doc.doc_id, doc])).values());
+
+        // 4. ค้นหาเอกสารจากรายการที่รวมทั้งหมดแล้ว
+        const document = uniqueUserDocuments.find(doc => doc.doc_id === docId);
+        if (!document) throw new Error("ไม่พบข้อมูลเอกสาร");
+        // --- จบส่วนที่แก้ไข ---
+
+        const [advisors, programs, departments] = await Promise.all([
+          fetch("/data/advisor.json").then(res => res.json()),
+          fetch("/data/structures/programs.json").then(res => res.json()),
+          fetch("/data/structures/departments.json").then(res => res.json()),
+        ]);
+        
+        setDocData({ 
+          document, 
+          user: {
+            ...currentUser,
+            fullname: `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim()
+          }, 
+          advisors, 
+          programs, 
+          departments,
+          allUserDocs: uniqueUserDocuments
+        });
+
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDocumentDetail();
+  }, [docId]);
 
     if (loading || authLoading) return <div className={styles.loadingText}>กำลังโหลดรายละเอียด...</div>;
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;

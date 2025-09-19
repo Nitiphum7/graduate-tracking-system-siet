@@ -29,55 +29,49 @@ import TemplatesPage from './pages/User_Page/TemplatesPage'; // ✅ 1. Import Te
 import AdminHomePage from './pages/Admin_Page/AdminHomePage';
 import AdminProfilePage from './pages/Admin_Page/AdminProfilePage';
 import AdminDocumentDetailPage from './pages/Admin_Page/AdminDocumentDetailPage';
+// ✅ 1. นำเข้า Component หน้าจัดการผู้ใช้งาน
+import ManageUsersPage from './pages/Admin_Page/ManageUsersPage';
+import ManageStudentDetailPage from './pages/Admin_Page/ManageStudentDetailPage';
 
 
 function App() {
-  return (
-    <Routes>
-      {/* --- Public Routes --- */}
-      <Route path="/" element={<Navigate replace to="/login" />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signature" element={<ProtectedRoute>
-          <SignaturePage />
-        </ProtectedRoute>
-      } />
+  return (
+    <Routes>
+      {/* --- Public Routes --- */}
+      <Route path="/" element={<Navigate replace to="/login" />} />
+      <Route path="/login" element={<LoginPage />} />
 
-      {/* --- Student Protected Routes (all under UserLayout) --- */}
-      <Route path="/student" element={
-        <ProtectedRoute>
-          <UserLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate replace to="home" />} /> 
-        <Route path="home" element={<HomePage />} />
-        <Route path="status" element={<StatusPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="signature" element={<SignaturePage />} />
-        <Route path="form1" element={<Form1Page />} />
-        <Route path="form2" element={<Form2Page />} />
-        <Route path="form3" element={<Form3Page />} />
-        <Route path="form4" element={<Form4Page />} />
-        <Route path="form5" element={<Form5Page />} />
-        <Route path="form6" element={<Form6Page />} />
-        <Route path="exam-submit" element={<ExamSubmitPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} />
-        <Route path="guide" element={<GuidePage />} />
+      {/* --- Student Routes (Nested under UserLayout) --- */}
+      <Route path="/student" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} /> 
+        <Route path="home" element={<HomePage />} />
+        <Route path="status" element={<StatusPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="signature" element={<SignaturePage />} />
+        <Route path="form1" element={<Form1Page />} />
+        <Route path="form2" element={<Form2Page />} />
+        <Route path="form3" element={<Form3Page />} />
+        <Route path="form4" element={<Form4Page />} />
+        <Route path="form5" element={<Form5Page />} />
+        <Route path="form6" element={<Form6Page />} />
+        <Route path="exam-submit" element={<ExamSubmitPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} />
+      </Route>
+      
+      {/* --- Admin Routes (Nested under AdminLayout) --- */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<AdminHomePage />} />
+        {/* ✅ 2. เพิ่ม Route สำหรับหน้าจัดการผู้ใช้งาน */}
+        <Route path="manage-users" element={<ManageUsersPage />} />
+        <Route path="manage-users/student/:studentId" element={<ManageStudentDetailPage />} />
         
-        {/* ✅ 2. เพิ่ม Route ของ templates เข้าไปที่นี่ */}
-        <Route path="templates" element={<TemplatesPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
+        <Route path="docs/:docId" element={<AdminDocumentDetailPage />} />
+      </Route>
 
-      </Route>
-      
-      {/* --- Admin Routes (Nested under AdminLayout) --- */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<AdminHomePage />} />
-        <Route path="profile" element={<AdminProfilePage />} />
-        <Route path="document/:docId" element={<AdminDocumentDetailPage />} />
-      </Route>
-
-    </Routes>
-  );
+    </Routes>
+  );
 }
 
 export default App;

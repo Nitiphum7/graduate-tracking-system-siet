@@ -68,8 +68,10 @@ function Form1Page() {
         navigate('/signature');
         return;
     }
-    
-    // 1. เตรียมข้อมูลที่จะส่งไป Server
+
+    const formPrefix = "Form1"; // หรือ "Form3", "Form4" ตามแต่ละฟอร์ม
+    const timestamp = Date.now(); // ดึงตัวเลขเวลาปัจจุบัน
+    const newDocId = `${formPrefix}-${timestamp}`; // ✅ สร้าง ID ที่ไม่ซ้ำกัน
     const submissionData = {
         student_user_id: currentUser.id,
         main_advisor_id: mainAdvisor,

@@ -99,25 +99,58 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+ useEffect(() => {
     const loadDashboard = async () => {
       try {
-        // 1. ดึงข้อมูลผู้ใช้จาก Local Storage เพื่อเอา ID
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        if (!storedUser || !storedUser.id) {
-          throw new Error("ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่");
-        }
+        const userEmail = localStorage.getItem("current_user");
+        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
 
-        // 2. เรียก API เพื่อดึงข้อมูล Dashboard ทั้งหมด
-        const response = await fetch(`${API_URL}/api/dashboard/student/${storedUser.id}`);
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้");
-        }
-        const data = await response.json();
+        const response = await fetch("/data/student.json");
+        const students = await response.json();
         
-        // 3. ตั้งค่า State ด้วยข้อมูลจริงจากฐานข้อมูล
-        setDashboardData(data);
+        const currentUser = students.find(s => s.email === userEmail);
+        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
+        
+        // ✅ 1. ดึงข้อมูลจากทุกแหล่งที่เป็นไปได้
+        const baseDocs = currentUser.documents || [];
+        
+        const pendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
+        const approvedDocsList = JSON.parse(localStorage.getItem('localStorage_approvedDocs') || '[]');
+        const rejectedDocsList = JSON.parse(localStorage.getItem('localStorage_rejectedDocs') || '[]');
+        const waitingAdvisorDocs = JSON.parse(localStorage.getItem('localStorage_waitingAdvisorDocs') || '[]');
+
+        const allLocalStorageDocs = [
+            ...pendingDocs,
+            ...approvedDocsList,
+            ...rejectedDocsList,
+            ...waitingAdvisorDocs
+        ].filter(doc => doc.student_email === userEmail);
+
+        // ✅ 2. รวมและกรองข้อมูลซ้ำซ้อนออก
+        const allDocuments = [...baseDocs, ...allLocalStorageDocs];
+        const uniqueDocuments = Array.from(new Map(allDocuments.map(doc => [doc.doc_id, doc])).values());
+
+        // --- ส่วนที่เหลือทำงานกับข้อมูลที่ถูกต้องและครบถ้วนแล้ว ---
+        const approvedStates = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่านเกณฑ์'];
+        const rejectedStates = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่านเกณฑ์', 'ส่งกลับแก้ไข'];
+
+        const approvedDocs = uniqueDocuments.filter(doc => approvedStates.includes(doc.status));
+        const rejectedDocs = uniqueDocuments.filter(doc => rejectedStates.includes(doc.status));
+        const pendingDocsCount = uniqueDocuments.filter(doc => !approvedStates.includes(doc.status) && !rejectedStates.includes(doc.status));
+        
+        uniqueDocuments.sort((a, b) => new Date(b.submitted_date) - new Date(a.submitted_date));
+
+        setDashboardData({
+          name: `${currentUser.first_name_th} ${currentUser.last_name_th}`,
+          counts: {
+            pending: pendingDocsCount.length,
+            approved: approvedDocs.length,
+            rejected: rejectedDocs.length,
+          },
+          approvedDocs: approvedDocs,
+          rejectedDocs: rejectedDocs,
+          allDocuments: uniqueDocuments,
+        });
 
       } catch (err) {
         setError(err.message);
