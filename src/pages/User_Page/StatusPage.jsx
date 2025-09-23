@@ -5,20 +5,18 @@ import StatusColumn from '../../components/StatusColumn';
 import { useAuth } from '../../hooks/useAuth.js'; 
 
 function StatusPage() {
-  const { user, loading } = useAuth(); // <-- 1. ดึง loading มาจาก Context ด้วย
+  const { user, loading: authLoading, token } = useAuth();
   const navigate = useNavigate();
   const API_URL = 'http://localhost:3000';
 
   const [documents, setDocuments] = useState({ approved: [], pending: [], rejected: [] });
-  // แก้ไข: ไม่ต้องมี state loading ของตัวเองแล้ว ใช้จาก Context แทน
+  const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // 3. จะยังไม่ทำอะไรเลยถ้า Context ยังโหลดไม่เสร็จ
-    if (loading) {
+    if (authLoading) {
       return; 
     }
-    // 4. หลังจากโหลดเสร็จแล้ว ค่อยเช็กว่ามี user หรือไม่
     if (!user) {
       navigate('/login');
       return;
@@ -26,52 +24,43 @@ function StatusPage() {
 
     const loadStatusData = async () => {
       try {
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
+        setIsFetching(true);
+        setError(null);
 
-        const response = await fetch("/data/student.json");
-        const students = await response.json();
-        const currentUser = students.find(s => s.email === userEmail);
-        if (!currentUser) throw new Error("ไม่พบข้อมูลนักศึกษา");
+        const response = await fetch(`${API_URL}/api/submissions/student/${user.id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-        // 1. ดึงข้อมูลเอกสารพื้นฐานจาก student.json (ถ้ามี)
-        const baseDocs = currentUser.documents || [];
+        if (!response.ok) {
+          throw new Error('ไม่สามารถดึงข้อมูลสถานะเอกสารได้');
+        }
 
-        // ✅✅✅ ส่วนที่แก้ไข: ดึงข้อมูลจาก localStorage ทุกส่วน ✅✅✅
-        // 2. ดึงเอกสารใหม่ที่ถูกบันทึกไว้ใน localStorage จากทุกสถานะที่เป็นไปได้
-        const pendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-        const approvedDocs = JSON.parse(localStorage.getItem('localStorage_approvedDocs') || '[]');
-        const rejectedDocs = JSON.parse(localStorage.getItem('localStorage_rejectedDocs') || '[]');
-        const waitingAdvisorDocs = JSON.parse(localStorage.getItem('localStorage_waitingAdvisorDocs') || '[]');
+        const allDocsFromServer = await response.json();
         
-        // 3. รวมเอกสารทั้งหมดจาก localStorage
-        const allLocalStorageDocs = [
-            ...pendingDocs, 
-            ...approvedDocs, 
-            ...rejectedDocs, 
-            ...waitingAdvisorDocs
-        ];
-        
-        // 4. กรองเอาเฉพาะเอกสารของ user ที่ login อยู่
-        const userLocalStorageDocs = allLocalStorageDocs.filter(doc => doc.student_email === userEmail);
-        
-        // 5. รวมข้อมูลจาก student.json และ localStorage เข้าด้วยกัน
-        // (อาจมีข้อมูลซ้ำกัน ถ้ามีเอกสารตัวเดียวกันใน student.json และ localStorage, ต้องมีวิธีจัดการในอนาคต)
-        const allDocs = [...baseDocs, ...userLocalStorageDocs];
-        // --- จบส่วนที่แก้ไข ---
-
-        // --- ส่วนที่เหลือทำงานเหมือนเดิม ---
-        const approvedStates = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่านเกณฑ์'];
+        const approvedStates = ['อนุมัติ', 'อนุมัติแล้ว', 'ผ่าน', 'ผ่านเกณฑ์'];
         const rejectedStates = ['ไม่อนุมัติ', 'ตีกลับ', 'ส่งกลับแก้ไข', 'ไม่ผ่านเกณฑ์'];
 
-        // ใช้ new Set เพื่อกรองเอกสารที่ซ้ำกันออก (กรองจาก doc_id)
-        const uniqueDocs = Array.from(new Map(allDocs.map(doc => [doc.doc_id, doc])).values());
+        const approved = [];
+        const rejected = [];
+        const pending = [];
 
-        const approved = uniqueDocs.filter(doc => approvedStates.includes(doc.status));
-        const rejected = uniqueDocs.filter(doc => rejectedStates.includes(doc.status));
-        const pending = uniqueDocs.filter(doc => !approvedStates.includes(doc.status) && !rejectedStates.includes(doc.status));
+        // ✅✅✅  ส่วนที่แก้ไข ✅✅✅
+        // ลบส่วน formattedDocs ออก และใช้ allDocsFromServer โดยตรง
+        // เพื่อให้ข้อมูลมี key เป็น id, type_name, submission_date ตรงตามที่ StatusColumn ต้องการ
         
-        const sortByDate = (a, b) => new Date(b.submitted_date || 0) - new Date(a.submitted_date || 0);
+        allDocsFromServer.forEach(doc => {
+            if (approvedStates.includes(doc.status_name)) {
+                approved.push(doc);
+            } else if (rejectedStates.includes(doc.status_name)) {
+                rejected.push(doc);
+            } else {
+                pending.push(doc);
+            }
+        });
+        
+        const sortByDate = (a, b) => new Date(b.submission_date || 0) - new Date(a.submission_date || 0);
         approved.sort(sortByDate);
         pending.sort(sortByDate);
         rejected.sort(sortByDate);
@@ -80,15 +69,22 @@ function StatusPage() {
 
       } catch (err) {
         setError(err.message);
+      } finally {
+        setIsFetching(false);
       }
     };
 
     loadStatusData();
-  }, []); // Dependency array ว่างเปล่า หมายความว่า Effect นี้จะทำงานครั้งเดียวเมื่อ Component โหลด
+    
+  }, [user, authLoading, navigate, token]);
 
-  // 2. แสดงสถานะ "กำลังตรวจสอบ" ระหว่างที่ Context กำลังเช็ค localStorage
-  if (loading) return <div className={styles.loadingText}>กำลังตรวจสอบสิทธิ์...</div>;
-  if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
+  if (authLoading || isFetching) {
+    return <main className={styles.statusPageContainer}><p className={styles.loadingText}>กำลังโหลดข้อมูล...</p></main>;
+  }
+
+  if (error) {
+    return <main className={styles.statusPageContainer}><p className={styles.errorText}>เกิดข้อผิดพลาด: {error}</p></main>;
+  }
 
   return (
     <main className={styles.statusPageContainer}>

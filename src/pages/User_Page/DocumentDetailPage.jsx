@@ -1,23 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import styles from './DocumentDetailPage.module.css';
 import { useAuth } from '../../hooks/useAuth.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faHistory } from '@fortawesome/free-solid-svg-icons';
 
-// 1. Import Component ทั้งหมดให้ครบ
+// Import Components
 import Form1Detail from '../../components/document-details/Form1Detail';
 import Form2Detail from '../../components/document-details/Form2Detail';
 import Form3Detail from '../../components/document-details/Form3Detail';
-import FinalSubmissionDetail from '../../components/document-details/FinalSubmissionDetail'; // Import component ใหม่
+import Form4Detail from '../../components/document-details/Form4Detail';
+import Form5Detail from '../../components/document-details/Form5Detail';
+import Form6Detail from '../../components/document-details/Form6Detail';
+import ExamResultDetail from '../../components/document-details/ExamResultDetail';
 
-// 2. เพิ่มรายการสำหรับเอกสารใหม่เข้าไปใน Map
 const detailComponentMap = {
-    1: Form1Detail,
-    2: Form2Detail,
-    3: Form3Detail,
-    4: FinalSubmissionDetail, // สมมติว่า ID ของ "แบบนำส่งเล่ม" คือ 4
-    // เพิ่ม ID ของเอกสารประเภทอื่นๆ ตามที่มีในระบบ
+    1: Form1Detail, 2: Form2Detail, 3: Form3Detail, 4: Form4Detail,
+    5: Form5Detail, 6: Form6Detail, 7: ExamResultDetail, 8: ExamResultDetail, 9: ExamResultDetail,
 };
 
 const formatThaiDateTime = (isoString) => {
@@ -30,145 +29,124 @@ const formatThaiDateTime = (isoString) => {
 
 function DocumentDetailPage() {
     const { docId } = useParams();
-    const { user: loggedInUser, loading: authLoading } = useAuth();
+    const { user: loggedInUser, loading: authLoading, token } = useAuth();
+    const navigate = useNavigate();
+    
     const [docData, setDocData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const API_URL = 'http://localhost:3000';
 
-  useEffect(() => {
-    const loadDocumentDetail = async () => {
-      try {
-        if (!docId) throw new Error("ไม่พบ ID ของเอกสารใน URL");
-
-        const userEmail = localStorage.getItem("current_user");
-        if (!userEmail) throw new Error("ไม่พบข้อมูลผู้ใช้");
-
-        const response = await fetch("/data/student.json");
-        const students = await response.json();
-        const currentUser = students.find(s => s.email === userEmail);
-        if(!currentUser) throw new Error("ไม่พบข้อมูลผู้ใช้ปัจจุบันในระบบ");
-
-        // ✅✅✅ ส่วนที่แก้ไข: ดึงข้อมูลจาก localStorage ทุกส่วน ✅✅✅
-        const baseDocs = currentUser.documents || [];
-        // 1. ดึงข้อมูลจากทุก "ตู้" ใน localStorage
-        const pendingDocs = JSON.parse(localStorage.getItem('localStorage_pendingDocs') || '[]');
-        const approvedDocs = JSON.parse(localStorage.getItem('localStorage_approvedDocs') || '[]');
-        const rejectedDocs = JSON.parse(localStorage.getItem('localStorage_rejectedDocs') || '[]');
-        const waitingAdvisorDocs = JSON.parse(localStorage.getItem('localStorage_waitingAdvisorDocs') || '[]');
+    useEffect(() => {
+        if (authLoading || !loggedInUser) return;
         
-        // 2. รวมเอกสารทั้งหมดจาก localStorage และกรองเฉพาะของ User คนปัจจุบัน
-        const allLocalStorageDocs = [
-            ...pendingDocs, 
-            ...approvedDocs, 
-            ...rejectedDocs, 
-            ...waitingAdvisorDocs
-        ].filter(doc => doc.student_email === userEmail);
+        const loadInitialData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`${API_URL}/api/submissions/${docId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error(`ไม่สามารถดึงข้อมูลได้ (Error: ${response.status})`);
+                const allDataFromApi = await response.json();
+                setDocData(allDataFromApi);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadInitialData();
+    }, [docId, authLoading, loggedInUser, navigate, token]);
 
-        // 3. รวมเอกสารทั้งหมดจากทุกแหล่ง
-        const allUserDocuments = [...baseDocs, ...allLocalStorageDocs];
-        const uniqueUserDocuments = Array.from(new Map(allUserDocuments.map(doc => [doc.doc_id, doc])).values());
+    // ✅✅✅ เพิ่มฟังก์ชัน statusClass ที่หายไปกลับเข้ามา ✅✅✅
+    const statusClass = (statusName) => {
+        if (!statusName) return styles.pending;
+        const approved = ['อนุมัติ', 'อนุมัติแล้ว', 'ผ่าน', 'ผ่านเกณฑ์'];
+        const rejected = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่านเกณฑ์', 'ส่งกลับแก้ไข'];
+        if (approved.includes(statusName)) return styles.approved;
+        if (rejected.includes(statusName)) return styles.rejected;
+        return styles.pending;
+    };
 
-        // 4. ค้นหาเอกสารจากรายการที่รวมทั้งหมดแล้ว
-        const document = uniqueUserDocuments.find(doc => doc.doc_id === docId);
-        if (!document) throw new Error("ไม่พบข้อมูลเอกสาร");
-        // --- จบส่วนที่แก้ไข ---
-
-        const [advisors, programs, departments] = await Promise.all([
-          fetch("/data/advisor.json").then(res => res.json()),
-          fetch("/data/structures/programs.json").then(res => res.json()),
-          fetch("/data/structures/departments.json").then(res => res.json()),
-        ]);
-        
-        setDocData({ 
-          document, 
-          user: {
-            ...currentUser,
-            fullname: `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim()
-          }, 
-          advisors, 
-          programs, 
-          departments,
-          allUserDocs: uniqueUserDocuments
-        });
-
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadDocumentDetail();
-  }, [docId]);
-
-    if (loading || authLoading) return <div className={styles.loadingText}>กำลังโหลดรายละเอียด...</div>;
+    if (loading || authLoading) return <div className={styles.loadingText}>กำลังโหลด...</div>;
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
     if (!docData) return <div>ไม่พบข้อมูลเอกสาร</div>;
-
-    const { document, user, advisors, studentProfile } = docData;
-
-    // --- ✅ DEBUG LOG 2: ดู ID ที่ใช้เลือก Component ---
-    console.log("Using document_type_id to select component:", document.document_type_id);
     
-    const DetailComponent = detailComponentMap[document.document_type_id];
-
-    const statusClass = (docStatus) => {
-        const approved = ['อนุมัติ', 'ผ่าน', 'อนุมัติแล้ว', 'ผ่านเกณฑ์'];
-        const rejected = ['ไม่อนุมัติ', 'ตีกลับ', 'ไม่ผ่านเกณฑ์'];
-        if (approved.includes(docStatus)) return styles.approved;
-        if (rejected.includes(docStatus)) return styles.rejected;
-        return styles.pending;
+    const { documentDetail = {}, advisors = [], allUserDocs = [] } = docData || {};
+    const DetailComponent = detailComponentMap[documentDetail.document_type_id];
+    
+    const userProfileData = {
+        ...documentDetail,
+        fullname: `${documentDetail.prefix_th || ''} ${documentDetail.first_name_th || ''} ${documentDetail.last_name_th || ''}`.trim()
     };
 
     return (
         <main className={styles.detailContainer}>
             <div className={styles.documentContent}>
                 <div className={styles.contentHeader}>
-                    <h1>{document.type_name}</h1>
+                    <h1>{documentDetail.title || 'กำลังโหลด...'}</h1>
                     <Link to="/student/status" className={styles.backLink}>
                         <FontAwesomeIcon icon={faArrowLeft} /> กลับหน้ารวมสถานะ
                     </Link>
                 </div>
-                
                 <div className={styles.detailCard}>
                     {DetailComponent ? (
                         <DetailComponent 
-                            doc={document} 
-                            user={user} 
+                            doc={documentDetail} 
+                            user={userProfileData}
                             advisors={advisors}
-                            studentProfile={studentProfile}
+                            allUserDocs={allUserDocs}
                         />
                     ) : (
-                        // --- ✅ DEBUG LOG 3: ข้อความนี้จะแสดงถ้าหา Component ไม่เจอ ---
-                        <p>หา Component ไม่เจอ! ไม่พบรายการสำหรับ ID: {document.document_type_id} ใน detailComponentMap</p>
+                        <p>ยังไม่มี Component สำหรับแสดงรายละเอียดของเอกสารประเภทนี้</p>
                     )}
                 </div>
-
                 <div className={styles.detailCard}>
                     <h3>ความคิดเห็นเพิ่มเติม (จากผู้ยื่น)</h3>
-                    <p className={styles.commentBox}>{document.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
+                    <p className={styles.commentBox}>{documentDetail.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
                 </div>
-            </div>
-
-            <aside className={styles.documentSidebar}>
-               <div className={`${styles.statusCard} ${statusClass(document.status_name)}`}>
-                    <div className={styles.statusText}>
-                        <p>สถานะปัจจุบัน</p>
-                        <h2>{document.status_name}</h2>
+                {documentDetail.admin_comment && (
+                    <div className={styles.detailCard}>
+                        <h3>ความคิดเห็น/เหตุผล (จากเจ้าหน้าที่)</h3>
+                        <p className={styles.commentBox}>{documentDetail.admin_comment}</p>
                     </div>
+                )}
+            </div>
+            <aside className={styles.documentSidebar}>
+               <div className={`${styles.statusCard} ${statusClass(documentDetail.status)}`}>
+                   <div className={styles.statusText}>
+                       <p>สถานะปัจจุบัน</p>
+                       <h2>{documentDetail.status}</h2>
+                   </div>
                </div>
                <div className={styles.detailCard}>
                     <h3>ข้อมูลการยื่น</h3>
                     <ul className={styles.infoList}>
-                        <li><label>ประเภทเอกสาร:</label> <span>{document.type_name}</span></li>
-                        <li><label>วันที่ยื่น:</label> <span>{formatThaiDateTime(document.submission_date)}</span></li>
-                        <li><label>วันที่อนุมัติ/ส่งกลับ:</label> <span>{formatThaiDateTime(document.action_date)}</span></li>
+                        <li><label>ประเภทเอกสาร:</label> <span>{documentDetail.title}</span></li>
+                        <li><label>วันที่ยื่น:</label> <span>{formatThaiDateTime(documentDetail.submission_date)}</span></li>
+                        <li><label>วันที่ดำเนินการล่าสุด:</label> <span>{formatThaiDateTime(documentDetail.action_date)}</span></li>
                     </ul>
                </div>
+                <div className={styles.detailCard}>
+                    <h3><FontAwesomeIcon icon={faHistory} /> ประวัติการดำเนินการ</h3>
+                    <ul className={styles.historyList}>
+                        {documentDetail.history && documentDetail.history.length > 0 ? (
+                            documentDetail.history.map((log, index) => (
+                                <li key={index}>
+                                    <div className={styles.logAction}>{log.action}</div>
+                                    <div className={styles.logActor}>โดย: {log.actor_name}</div>
+                                    <div className={styles.logDate}>{formatThaiDateTime(log.log_date)}</div>
+                                    {log.log_comment && <p className={styles.logComment}><b>เหตุผล:</b> {log.log_comment}</p>}
+                                </li>
+                            ))
+                        ) : (
+                            <li>ยังไม่มีประวัติการดำเนินการ</li>
+                        )}
+                    </ul>
+                </div>
             </aside>
         </main>
     );
 }
 
 export default DocumentDetailPage;
-

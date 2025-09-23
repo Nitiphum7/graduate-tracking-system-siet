@@ -23,13 +23,12 @@ import Form6Page from './pages/User_Page/Form6Page';
 import ExamSubmitPage from './pages/User_Page/ExamSubmitPage';
 import ProfilePage from './pages/User_Page/ProfilePage';
 import GuidePage from './pages/User_Page/GuidePage';
-import TemplatesPage from './pages/User_Page/TemplatesPage'; // ✅ 1. Import TemplatesPage เข้ามา
+import TemplatesPage from './pages/User_Page/TemplatesPage'; 
 
 // --- Admin Pages ---
 import AdminHomePage from './pages/Admin_Page/AdminHomePage';
 import AdminProfilePage from './pages/Admin_Page/AdminProfilePage';
 import AdminDocumentDetailPage from './pages/Admin_Page/AdminDocumentDetailPage';
-// ✅ 1. นำเข้า Component หน้าจัดการผู้ใช้งาน
 import ManageUsersPage from './pages/Admin_Page/ManageUsersPage';
 import ManageStudentDetailPage from './pages/Admin_Page/ManageStudentDetailPage';
 
@@ -40,6 +39,7 @@ function App() {
       {/* --- Public Routes --- */}
       <Route path="/" element={<Navigate replace to="/login" />} />
       <Route path="/login" element={<LoginPage />} />
+        <Route path="signature" element={<SignaturePage />} />
 
       {/* --- Student Routes (Nested under UserLayout) --- */}
       <Route path="/student" element={<UserLayout />}>
@@ -47,7 +47,6 @@ function App() {
         <Route path="home" element={<HomePage />} />
         <Route path="status" element={<StatusPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="signature" element={<SignaturePage />} />
         <Route path="form1" element={<Form1Page />} />
         <Route path="form2" element={<Form2Page />} />
         <Route path="form3" element={<Form3Page />} />
@@ -56,6 +55,8 @@ function App() {
         <Route path="form6" element={<Form6Page />} />
         <Route path="exam-submit" element={<ExamSubmitPage />} />
         <Route path="docs/:docId" element={<DocumentDetailPage />} />
+        <Route path="guide" element={<GuidePage />} />
+        <Route path="templates" element={<TemplatesPage />} />
       </Route>
       
       {/* --- Admin Routes (Nested under AdminLayout) --- */}

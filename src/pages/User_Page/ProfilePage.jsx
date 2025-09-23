@@ -4,7 +4,7 @@ import styles from './ProfilePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faEdit, faTrash, faUserCircle, faGraduationCap, faSignature, faPaperclip, faPencilAlt, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
 import Cropper from 'react-cropper';
-import 'cropperjs/dist/cropper.css';
+import 'cropperjs/dist/cropper.css'; // อย่าลืม import CSS ของ Cropper
 import SignaturePad from 'react-signature-pad-wrapper';
 
 // --- Helper Functions ---
@@ -51,30 +51,39 @@ function ProfilePage() {
             if (!authUser) { setLoading(false); return; }
 
             try {
-                const [profileRes, advisorsRes, submissionsRes] = await Promise.all([
+                setLoading(true);
+                const responses = await Promise.all([
                     fetch(`${API_URL}/api/profile/${authUser.id}`),
                     fetch(`${API_URL}/api/advisors`),
                     fetch(`${API_URL}/api/submissions/student/${authUser.id}`)
                 ]);
 
-                if (!profileRes.ok) throw new Error(`ไม่สามารถดึงข้อมูลโปรไฟล์ได้`);
-                
-                const userProfile = await profileRes.json();
-                const advisors = await advisorsRes.json();
-                const allUserDocuments = await submissionsRes.json();
+                for (const res of responses) {
+                    if (!res.ok) throw new Error(`Failed to fetch data (status: ${res.status})`);
+                }
+
+                const [userProfile, advisors, allUserDocuments] = await Promise.all(
+                    responses.map(res => res.json())
+                );
                 
                 const findAdvisorName = (advisorId) => {
-    if (!advisorId) return '-';
-    // ✅ แก้ไขตรงนี้ให้เทียบกับ `advisor_id`
-    const advisor = advisors.find(a => a.advisor_id === advisorId);
-    return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
-};
+                    if (!advisorId) return '-';
+                    const advisor = advisors.find(a => a.advisor_id === advisorId);
+                    return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
+                };
 
-                const approvedDocs = allUserDocuments.filter(doc => ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'].includes(doc.status_name));
+                const approvedStatusList = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'];
+                const approvedDocs = allUserDocuments.filter(doc => approvedStatusList.includes(doc.status_name));
 
-                const approvedEngMasterDoc = approvedDocs.find(doc => doc.type_name.includes('ป.โท'));
-                const approvedEngPhdDoc = approvedDocs.find(doc => doc.type_name.includes('ป.เอก'));
-                const approvedQEDoc = approvedDocs.find(doc => doc.type_name.includes('วัดคุณสมบัติ'));
+                const approvedEngMasterDoc = approvedDocs.find(doc => 
+                    doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.โท')
+                );
+                const approvedEngPhdDoc = approvedDocs.find(doc => 
+                    doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.เอก')
+                );
+                const approvedQEDoc = approvedDocs.find(doc => 
+                    doc.type_name.includes('วัดคุณสมบัติ')
+                );
 
                 setCurrentUser(userProfile);
                 setPhoneInput(userProfile.phone || '');
@@ -104,7 +113,7 @@ function ProfilePage() {
         loadProfileData();
     }, [authUser]);
 
-    // --- Event Handlers ---
+    // --- Event Handlers (โค้ดส่วนนี้เป็นของคุณทั้งหมด ไม่ได้แก้ไข) ---
     const handleSavePhone = async () => {
         if (!currentUser) return;
         try {
@@ -252,11 +261,11 @@ function ProfilePage() {
                         <section className={styles.profileCard}>
                             <h3><FontAwesomeIcon icon={faSignature} /> ลายเซ็นดิจิทัล</h3>
                                <div className={styles.signatureDisplayArea}>
-                                 {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
+                                  {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
                                </div>
                                <div className={styles.signatureActions}>
-                                 <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
-                                 <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature} disabled={!signatureImage}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
+                                  <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
+                                  <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature} disabled={!signatureImage}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
                                </div>
                         </section>
                     </div>
@@ -290,9 +299,9 @@ function ProfilePage() {
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบวิทยานิพนธ์ขั้นสุดท้าย</h4>
                                 <ul className={styles.statusListDetailed}>
-                                      <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
-                                      <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || 'ยังไม่ยื่น'}</span></li>
-                                      <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
+                                     <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
+                                     <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || 'ยังไม่ยื่น'}</span></li>
+                                     <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
                                 </ul>
                             </div>
                             <div className={styles.statusGroup}>
@@ -338,7 +347,7 @@ function ProfilePage() {
                 </div>
             </main>
 
-            {/* --- Modals --- */}
+            {/* --- Modals (โค้ด Modal ของคุณ) --- */}
             {isCropModalOpen && (
                 <div className={styles.modalOverlay}>
                     <div className={`${styles.modalBox} ${styles.cropModalBox}`}>

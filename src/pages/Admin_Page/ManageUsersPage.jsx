@@ -16,12 +16,18 @@ const PieChartCard = ({ data, labels }) => {
             label: ' จำนวน',
             data: data,
             backgroundColor: ['#EC4899', '#8B5CF6', '#F59E0B', '#10B981'],
-            borderColor: '#FFFFFF', borderWidth: 2,
+            borderColor: '#FFFFFF',
+            borderWidth: 2,
         }],
     };
     const options = {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        },
     };
     return <div className={styles.chartContainer}><Pie data={chartData} options={options} /></div>;
 };
@@ -32,23 +38,48 @@ function ManageUsersPage() {
     const { activeSection } = useOutletContext();
     const [masterData, setMasterData] = useState({ students: [], advisors: [] });
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate(); // ✅ สร้าง navigate function ที่นี่
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
             try {
-                // ✅ 1. แก้ไขให้ดึงข้อมูลจาก student.json และ advisor.json เท่านั้น
+                // ✅✅✅ แก้ไขบรรทัดนี้: เปลี่ยนจาก 'user_token' เป็น 'token' ✅✅✅
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error("No token found!");
+                    // เพิ่มการป้องกัน: อาจจะนำทางผู้ใช้กลับไปหน้า login
+                    // navigate('/login'); 
+                    setLoading(false); // หยุดการโหลด
+                    return;
+                }
+
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
                 const [studentsRes, advisorsRes] = await Promise.all([
-                    fetch('/data/student.json'),
-                    fetch('/data/advisor.json')
+                    fetch('/api/students', { headers }),
+                    fetch('/api/advisors', { headers })
                 ]);
 
                 if (!studentsRes.ok || !advisorsRes.ok) {
-                    throw new Error('ไม่สามารถดึงข้อมูลได้');
+                    // หาก Token หมดอายุ (Server ตอบกลับ 401 หรือ 403)
+                    if (studentsRes.status === 401 || studentsRes.status === 403 || advisorsRes.status === 401 || advisorsRes.status === 403) {
+                         console.error("Token is invalid or expired.");
+                         // อาจจะเคลียร์ token เก่าแล้วพาไปหน้า login
+                         // localStorage.removeItem('token');
+                         // navigate('/login');
+                    }
+                    throw new Error('ไม่สามารถดึงข้อมูลจาก Server ได้');
                 }
 
                 const students = await studentsRes.json();
                 const advisors = await advisorsRes.json();
+
+             console.log("ข้อมูล ADVISORS ที่ได้รับจาก SERVER:", advisors); 
+
                 setMasterData({ students, advisors });
             } catch (error) {
                 console.error("Failed to fetch user data:", error);
@@ -58,31 +89,27 @@ function ManageUsersPage() {
         };
         fetchData();
     }, []);
-    
+
     if (loading) return <div>Loading...</div>;
 
     const renderSection = () => {
         switch (activeSection) {
             case 'students':
-                return <ManageStudentsSection students={masterData.students} advisors={masterData.advisors} navigate={navigate} />; // ✅ ส่ง navigate เข้าไป
+                return <ManageStudentsSection students={masterData.students} advisors={masterData.advisors} navigate={navigate} />;
             case 'advisors':
                 return <ManageAdvisorsSection advisors={masterData.advisors} />;
             case 'overview':
             default:
-                // ✅ 2. ลบการส่ง executives prop ที่ไม่มีอยู่ออกไป
                 return <OverviewSection students={masterData.students} advisors={masterData.advisors} />;
         }
     };
 
     return (
-        <div>
-            {renderSection()}
-        </div>
+        <div>{renderSection()}</div>
     );
 }
 
-// --- Sub-Components ---
-// ✅ 3. อัปเดต OverviewSection ให้ใช้ข้อมูลจาก advisors.json ไฟล์เดียว
+// ... ส่วนของ OverviewSection, ManageStudentsSection, และ ManageAdvisorsSection เหมือนเดิม ...
 const OverviewSection = ({ students, advisors }) => {
     const masterStudents = students.filter(s => s.degree === 'ปริญญาโท').length;
     const phdStudents = students.filter(s => s.degree === 'ปริญญาเอก').length;
@@ -116,7 +143,7 @@ const OverviewSection = ({ students, advisors }) => {
                         <div className={styles.statItem}><label>อาจารย์ภายนอก</label><span>{externalAdvisors}</span></div>
                         <div className={styles.statItem}><label>ผู้บริหาร</label><span>{executives}</span></div>
                     </div>
-                     <PieChartCard 
+                    <PieChartCard 
                         labels={['อาจารย์ภายใน', 'อาจารย์ภายนอก', 'ผู้บริหาร']}
                         data={[internalAdvisors, externalAdvisors, executives]}
                     />
@@ -126,7 +153,7 @@ const OverviewSection = ({ students, advisors }) => {
     );
 };
 
-const ManageStudentsSection = ({ students, advisors, navigate }) => { // ✅ รับ navigate มา
+const ManageStudentsSection = ({ students, advisors, navigate }) => {
     const [filteredStudents, setFilteredStudents] = useState(students);
     const [filters, setFilters] = useState({ studentId: '', name: '', email: '', advisorId: '' });
 
@@ -149,7 +176,7 @@ const ManageStudentsSection = ({ students, advisors, navigate }) => { // ✅ ร
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
+        setFilters(prev => ({...prev, [name]: value }));
     };
 
     const resetFilters = () => {
@@ -199,13 +226,13 @@ const ManageStudentsSection = ({ students, advisors, navigate }) => { // ✅ ร
 };
 
 const ManageAdvisorsSection = ({ advisors }) => {
-     return (
+    return (
         <section>
             <h1><FontAwesomeIcon icon={faUserTie} /> จัดการรายชื่ออาจารย์</h1>
             <p>เพิ่ม แก้ไข และกำหนดบทบาทของอาจารย์ในระบบ</p>
-             <div className={styles.tableCard}>
+            <div className={styles.tableCard}>
                 <div className={styles.filterCard}>
-                     <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูล</h3>
+                    <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูล</h3>
                 </div>
                 <div className={styles.tableHeader}>
                     <h2>รายชื่ออาจารย์ ({advisors.length})</h2>

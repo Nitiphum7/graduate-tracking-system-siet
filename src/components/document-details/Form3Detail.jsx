@@ -1,58 +1,86 @@
 import React from 'react';
 import styles from '../../pages/User_Page/DocumentDetailPage.module.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFilePdf, faPaperclip, faUserGraduate, faBook, faUsers } from '@fortawesome/free-solid-svg-icons';
 
-// ฟังก์ชันสำหรับแปลงวันที่
+// ✅ 1. เพิ่มฟังก์ชันสำหรับจัดรูปแบบวันที่
 const formatSimpleDate = (isoString) => {
     if (!isoString) return '-';
     return new Date(isoString).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-// 1. แก้ไขให้ Component รับ props ที่เป็นข้อมูลพร้อมใช้
-function Form3Detail({ doc, studentInfo, approvedThesisInfo, advisorNames }) {
+function Form3Detail({ doc, user, advisors }) {
+
+    const findAdvisorName = (advisorId) => {
+        if (!advisorId || !advisors || advisors.length === 0) return '-';
+        const advisor = advisors.find(a => 
+            String(a.advisor_id) === String(advisorId) || 
+            String(a.id) === String(advisorId)
+        );
+        return advisor 
+            ? `${advisor.prefix_th || ''}${advisor.first_name_th || ''} ${advisor.last_name_th || ''}`.trim() 
+            : 'ไม่พบข้อมูลอาจารย์';
+    };
+
+    // --- ดึงข้อมูลจาก Props ---
+    // ✅ 2. เพิ่มการดึงชื่อประธานและที่ปรึกษาร่วม 2
+    const mainAdvisorName = findAdvisorName(user?.main_advisor_id);
+    const coAdvisor1Name = findAdvisorName(user?.co_advisor1_id);
+    const coAdvisor2Name = findAdvisorName(user?.co_advisor2_id);
+    const programChairName = findAdvisorName(user?.proposal_chair_id);
+
+    const details = doc.form_details || {};
+    const files = details.files || [];
+    const API_URL = 'http://localhost:3000';
 
     return (
         <>
-            <h4>ข้อมูลผู้ยื่นคำร้อง</h4>
+            <h4><FontAwesomeIcon icon={faUserGraduate} /> ข้อมูลผู้ยื่นคำร้อง</h4>
             <ul className={styles.infoList}>
-                {/* 2. ใช้ข้อมูลจาก studentInfo */}
-                <li><label>ชื่อ-นามสกุล:</label> <span>{studentInfo?.fullname || '-'}</span></li>
-                <li><label>รหัสนักศึกษา:</label> <span>{studentInfo?.student_id || '-'}</span></li>
-                <li><label>หลักสูตร:</label> <span>{studentInfo?.programName || '-'}</span></li>
-                <li><label>ภาควิชา:</label> <span>{studentInfo?.departmentName || '-'}</span></li>
+                <li><label>ชื่อ-นามสกุล:</label> <span>{user.fullname}</span></li>
+                <li><label>รหัสนักศึกษา:</label> <span>{user.student_id}</span></li>
+                <li><label>หลักสูตร:</label> <span>{user.program_name || '-'}</span></li>
+                <li><label>ภาควิชา:</label> <span>{user.department_name || '-'}</span></li>
             </ul>
 
             <hr className={styles.subtleDivider} />
             
-            <h4>ข้อมูลหัวข้อวิทยานิพนธ์ (ที่ได้รับอนุมัติ)</h4>
+            <h4><FontAwesomeIcon icon={faBook} /> ข้อมูลหัวข้อวิทยานิพนธ์ (ที่ได้รับอนุมัติ)</h4>
             <ul className={styles.infoList}>
-                {/* 3. ใช้ข้อมูลจาก approvedThesisInfo */}
-                <li><label>วันที่อนุมัติ:</label> <span>{formatSimpleDate(approvedThesisInfo?.approval_date)}</span></li>
-                <li><label>ภาษาไทย:</label> <span className={styles.thesisTitle}>{approvedThesisInfo?.title_th || '-'}</span></li>
-                <li><label>ภาษาอังกฤษ:</label> <span className={styles.thesisTitle}>{approvedThesisInfo?.title_en || '-'}</span></li>
+                {/* ✅ 3. เพิ่มการแสดงผลวันที่อนุมัติ */}
+                <li><label>วันที่อนุมัติ:</label> <span>{formatSimpleDate(user?.proposal_approval_date)}</span></li>
+                <li><label>ภาษาไทย:</label> <span className={styles.thesisTitle}>{user.thesis_title_th || '-'}</span></li>
+                <li><label>ภาษาอังกฤษ:</label> <span className={styles.thesisTitle}>{user.thesis_title_en || '-'}</span></li>
             </ul>
 
             <hr className={styles.subtleDivider} />
 
-            <h4>อาจารย์ผู้รับผิดชอบ</h4>
+            <h4><FontAwesomeIcon icon={faUsers} /> อาจารย์ผู้รับผิดชอบ</h4>
             <div className={styles.subsection}>
                 <ul className={`${styles.infoList} ${styles.compact}`}>
-                    {/* 4. ใช้ข้อมูลจาก advisorNames */}
-                    <li><label>ประธานกรรมการสอบ (จากฟอร์ม 2):</label> <span>{advisorNames?.programChairName || '-'}</span></li>
-                    <li><label>อาจารย์ที่ปรึกษาหลัก:</label> <span>{advisorNames?.mainAdvisorName || '-'}</span></li>
-                    <li><label>อาจารย์ที่ปรึกษาร่วม 1:</label> <span>{advisorNames?.coAdvisor1Name || '-'}</span></li>
-                    <li><label>อาจารย์ที่ปรึกษาร่วม 2:</label> <span>{advisorNames?.coAdvisor2Name || '-'}</span></li>
+                    {/* ✅ 4. เพิ่มการแสดงผลประธานและที่ปรึกษาร่วม 2 */}
+                    <li><label>ประธานกรรมการสอบ (จากฟอร์ม 2):</label> <span>{programChairName}</span></li>
+                    <li><label>อาจารย์ที่ปรึกษาหลัก:</label> <span>{mainAdvisorName}</span></li>
+                    <li><label>อาจารย์ที่ปรึกษาร่วม 1:</label> <span>{coAdvisor1Name}</span></li>
+                    <li><label>อาจารย์ที่ปรึกษาร่วม 2:</label> <span>{coAdvisor2Name}</span></li>
                 </ul>
             </div>
 
             <hr className={styles.subtleDivider} />
-            <h4>เอกสารแนบ</h4>
+
+            <h4><FontAwesomeIcon icon={faPaperclip} /> เอกสารแนบ</h4>
             <ul className={styles.infoList}>
-                {doc.files && doc.files.length > 0 ? (
-                    doc.files.map((file, index) => (
+                {files.length > 0 ? (
+                    files.map((file, index) => (
                         <li key={index}>
-                            <label>{file.type}:</label>
-                            <a href="#" onClick={(e) => e.preventDefault()} className={styles.fileLink}>
-                                {file.name}
+                            <label>{file.type || 'เอกสารแนบ'}:</label>
+                            <a 
+                                href={`${API_URL}${file.path}`}
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className={styles.fileLink}
+                            >
+                               <FontAwesomeIcon icon={faFilePdf} /> {file.name}
                             </a>
                         </li>
                     ))
