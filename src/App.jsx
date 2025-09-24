@@ -63,44 +63,14 @@ function App() {
         <Route path="templates" element={<TemplatesPage />} />
       </Route>
       
-      {/* --- ✅✅✅ Advisor & Approver Routes (Nested under UserLayout) ✅✅✅ --- */}
-      {/* ใช้ UserLayout เดียวกับ Student เพื่อให้หน้าตาเหมือนกัน */}
-      <Route path="/advisor" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<MyTasksPage />} />
-        {/* ถ้ามีหน้ารายละเอียดเอกสารสำหรับ Advisor ก็ใช้ตัวเดียวกับ Student ได้ */}
-        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
-        {/* อาจจะมีหน้า Profile ของตัวเอง */}
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
-
-      <Route path="/program_chair" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="้home" />} />
-        <Route path="home" element={<MyTasksPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
-
-      <Route path="/assistant_rector" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<MyTasksPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
-
-        <Route path="/external_professor" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<MyTasksPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
-
-        <Route path="/executive" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<MyTasksPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
+      {['advisor', 'program_chair', 'assistant_rector', 'external_professor', 'executive'].map(role => (
+        <Route key={role} path={`/${role}`} element={<UserLayout />}>
+          <Route index element={<Navigate replace to="home" />} />
+          <Route path="home" element={<MyTasksPage />} />
+          <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
+      ))}
 
       {/* --- Admin Routes (Nested under AdminLayout) --- */}
       <Route path="/admin" element={<AdminLayout />}>
