@@ -280,6 +280,10 @@ function ProfilePage() {
                                 </div>
                             </div>
                         </section>
+
+                         {/* ✅✅✅ เรียกใช้ Component ที่สร้างขึ้นมาตรงนี้ ✅✅✅ */}
+                        <AccountManagementSection currentUser={currentUser} setCurrentUser={setCurrentUser} />
+
                         <section className={styles.profileCard}>
                             <h3><FontAwesomeIcon icon={faSignature} /> ลายเซ็นดิจิทัล</h3>
                                 <div className={styles.signatureDisplayArea}>
@@ -291,25 +295,34 @@ function ProfilePage() {
                                 </div>
                         </section>
                     </div>
+
                     {/* --- Right Column --- */}
                     <div className={styles.sideProfileColumn}>
+                        {/* ✅ 1. การ์ดข้อมูลวิทยานิพนธ์และอาจารย์ที่ปรึกษา */}
                         <section className={styles.profileCard}>
-                            <h3><FontAwesomeIcon icon={faGraduationCap} /> สรุปสถานะการศึกษา</h3>
+                            <h3><FontAwesomeIcon icon={faGraduationCap} /> ข้อมูลวิทยานิพนธ์</h3>
                             <div className={styles.statusGroup}>
-                                <h4 className={styles.groupTitle}>ข้อมูลวิทยานิพนธ์</h4>
+                                <h4 className={styles.groupTitle}>รายละเอียดวิทยานิพนธ์</h4>
                                 <ul className={styles.statusListDetailed}>
-                                    <li><label>ชื่อวิทยานิพนธ์ (ไทย):</label><span>{currentUser.thesis_title_th || '-'}</span></li>
-                                    <li><label>ชื่อวิทยานิพนธ์ (อังกฤษ):</label><span>{currentUser.thesis_title_en || '-'}</span></li>
+                                    <li><label>ชื่อ (ไทย):</label><span>{currentUser.thesis_title_th || '-'}</span></li>
+                                    <li><label>ชื่อ (อังกฤษ):</label><span>{currentUser.thesis_title_en || '-'}</span></li>
                                 </ul>
                             </div>
                             <div className={styles.statusGroup}>
-                                <h4 className={styles.groupTitle}>รายชื่ออาจารย์ที่ปรึกษาวิทยานิพนธ์</h4>
+                                <h4 className={styles.groupTitle}>อาจารย์ที่ปรึกษา</h4>
                                 <ul className={styles.statusListDetailed}>
                                     <li><label>อาจารย์ที่ปรึกษาหลัก:</label><span>{processedData.mainAdvisorName || '-'}</span></li>
                                     <li><label>อาจารย์ที่ปรึกษาร่วม 1:</label><span>{processedData.coAdvisor1Name || '-'}</span></li>
                                     <li><label>อาจารย์ที่ปรึกษาร่วม 2:</label><span>{processedData.coAdvisor2Name || '-'}</span></li>
                                 </ul>
                             </div>
+                        </section>
+
+                        {/* ✅✅✅ โค้ดส่วนที่แก้ไขทั้งหมด ✅✅✅ */}
+                        <section className={styles.profileCard}>
+                            <h3><FontAwesomeIcon icon={faClipboardCheck} /> สรุปผลการดำเนินการ</h3>
+
+                            {/* --- 1. การสอบหัวข้อและเค้าโครง --- */}
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบหัวข้อและเค้าโครง</h4>
                                 <ul className={styles.statusListDetailed}>
@@ -318,6 +331,8 @@ function ProfilePage() {
                                     <li><label>วันที่อนุมัติหัวข้อ:</label><span>{formatThaiDate(currentUser.proposal_approval_date)}</span></li>
                                 </ul>
                             </div>
+
+                            {/* --- 2. การสอบวิทยานิพนธ์ขั้นสุดท้าย --- */}
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบวิทยานิพนธ์ขั้นสุดท้าย</h4>
                                 <ul className={styles.statusListDetailed}>

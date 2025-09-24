@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import styles from './ManageStudentDetailPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

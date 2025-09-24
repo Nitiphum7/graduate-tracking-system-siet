@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/Admin_Page/ManageUsersPage.jsx
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import styles from './ManageUsersPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartPie, faUserGraduate, faUserTie, faPlus, faFilter, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
+
+// Import ตารางที่เราสร้างขึ้นมาใหม่
 import StudentTable from '../../components/admin/StudentTable';
+import AdvisorTable from '../../components/admin/AdvisorTable'; // ✅ 1. Import AdvisorTable
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -32,7 +36,6 @@ const PieChartCard = ({ data, labels }) => {
     return <div className={styles.chartContainer}><Pie data={chartData} options={options} /></div>;
 };
 
-const UserTable = ({ users, type }) => <div className={styles.placeholder}>[Table for {type}: {users.length} items]</div>;
 
 function ManageUsersPage() {
     const { activeSection } = useOutletContext();
@@ -92,12 +95,60 @@ function ManageUsersPage() {
 
     if (loading) return <div>Loading...</div>;
 
+    const handleAddNewStudent = () => {
+        navigate('/admin/manage-users/student/new');
+    };
+    
+    const handleAddNewAdvisor = () => {
+        navigate('/admin/manage-users/advisor/new');
+    };
+
+    const handleDeleteStudent = (studentIdToDelete) => {
+        if (window.confirm(`คุณต้องการลบนักศึกษา ID: ${studentIdToDelete} ใช่หรือไม่?`)) {
+            const updatedStudents = masterData.students.filter(student => student.student_id !== studentIdToDelete);
+            
+            setMasterData(prevData => ({
+                ...prevData,
+                students: updatedStudents
+            }));
+
+            localStorage.setItem('savedStudents', JSON.stringify(updatedStudents));
+            
+            alert(`ลบนักศึกษา ID: ${studentIdToDelete} เรียบร้อยแล้ว`);
+        }
+    };
+
+    // ✅ 1. เพิ่มฟังก์ชันสำหรับลบอาจารย์
+    const handleDeleteAdvisor = (advisorIdToDelete) => {
+        if (window.confirm(`คุณต้องการลบข้อมูลอาจารย์ ID: ${advisorIdToDelete} ใช่หรือไม่?`)) {
+            // กรองข้อมูลอาจารย์ที่จะลบออก
+            const updatedAdvisors = masterData.advisors.filter(advisor => advisor.advisor_id !== advisorIdToDelete);
+
+            // อัปเดต State
+            setMasterData(prevData => ({
+                ...prevData,
+                advisors: updatedAdvisors
+            }));
+
+            // อัปเดต Local Storage
+            localStorage.setItem('savedAdvisors', JSON.stringify(updatedAdvisors));
+            
+            alert(`ลบข้อมูลอาจารย์ ID: ${advisorIdToDelete} เรียบร้อยแล้ว`);
+        }
+    };
+
     const renderSection = () => {
         switch (activeSection) {
             case 'students':
                 return <ManageStudentsSection students={masterData.students} advisors={masterData.advisors} navigate={navigate} />;
             case 'advisors':
-                return <ManageAdvisorsSection advisors={masterData.advisors} />;
+                return <ManageAdvisorsSection 
+                            advisors={masterData.advisors} 
+                            onAddNewAdvisor={handleAddNewAdvisor}
+                            navigate={navigate}
+                            // ✅ 2. ส่งฟังก์ชันลบลงไปเป็น prop
+                            onDeleteAdvisor={handleDeleteAdvisor}
+                        />;
             case 'overview':
             default:
                 return <OverviewSection students={masterData.students} advisors={masterData.advisors} />;
@@ -157,22 +208,15 @@ const ManageStudentsSection = ({ students, advisors, navigate }) => {
     const [filteredStudents, setFilteredStudents] = useState(students);
     const [filters, setFilters] = useState({ studentId: '', name: '', email: '', advisorId: '' });
 
+    // ใช้ useEffect เพื่ออัปเดต filteredStudents เมื่อ students หลักมีการเปลี่ยนแปลง (เช่น การลบ)
     useEffect(() => {
         let data = [...students];
-        if (filters.studentId) {
-            data = data.filter(s => s.student_id.includes(filters.studentId));
-        }
-        if (filters.name) {
-            data = data.filter(s => `${s.first_name_th} ${s.last_name_th}`.toLowerCase().includes(filters.name.toLowerCase()));
-        }
-        if (filters.email) {
-            data = data.filter(s => s.email.toLowerCase().includes(filters.email.toLowerCase()));
-        }
-        if (filters.advisorId) {
-            data = data.filter(s => s.main_advisor_id === filters.advisorId);
-        }
+        if (filters.studentId) data = data.filter(s => s.student_id.includes(filters.studentId));
+        if (filters.name) data = data.filter(s => `${s.first_name_th} ${s.last_name_th}`.toLowerCase().includes(filters.name.toLowerCase()));
+        if (filters.email) data = data.filter(s => s.email.toLowerCase().includes(filters.email.toLowerCase()));
+        if (filters.advisorId) data = data.filter(s => s.main_advisor_id === filters.advisorId);
         setFilteredStudents(data);
-    }, [filters, students]);
+    }, [filters, students]); // เพิ่ม students ใน dependency array
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -191,35 +235,22 @@ const ManageStudentsSection = ({ students, advisors, navigate }) => {
                 <div className={styles.filterCard}>
                     <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูลนักศึกษา</h3>
                     <div className={styles.filterGrid}>
-                        <div className={styles.filterGroup}>
-                            <label htmlFor="studentId">รหัสนักศึกษา</label>
-                            <input type="text" id="studentId" name="studentId" value={filters.studentId} onChange={handleFilterChange} placeholder="ค้นหา..." />
-                        </div>
-                        <div className={styles.filterGroup}>
-                            <label htmlFor="name">ชื่อ-นามสกุล</label>
-                            <input type="text" id="name" name="name" value={filters.name} onChange={handleFilterChange} placeholder="ค้นหา..." />
-                        </div>
-                        <div className={styles.filterGroup}>
-                            <label htmlFor="email">อีเมล</label>
-                            <input type="text" id="email" name="email" value={filters.email} onChange={handleFilterChange} placeholder="ค้นหา..." />
-                        </div>
-                        <div className={styles.filterGroup}>
-                            <label htmlFor="advisorId">อาจารย์ที่ปรึกษาหลัก</label>
-                            <select id="advisorId" name="advisorId" value={filters.advisorId} onChange={handleFilterChange}>
-                                <option value="">ทั้งหมด</option>
-                                {advisors && advisors.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`}</option>)}
-                            </select>
-                        </div>
+                        <div className={styles.filterGroup}><label htmlFor="studentId">รหัสนักศึกษา</label><input type="text" id="studentId" name="studentId" value={filters.studentId} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
+                        <div className={styles.filterGroup}><label htmlFor="name">ชื่อ-นามสกุล</label><input type="text" id="name" name="name" value={filters.name} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
+                        <div className={styles.filterGroup}><label htmlFor="email">อีเมล</label><input type="text" id="email" name="email" value={filters.email} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
+                        <div className={styles.filterGroup}><label htmlFor="advisorId">อาจารย์ที่ปรึกษาหลัก</label><select id="advisorId" name="advisorId" value={filters.advisorId} onChange={handleFilterChange}><option value="">ทั้งหมด</option>{advisors?.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`}</option>)}</select></div>
                     </div>
-                    <div className={styles.filterActions}>
-                        <button onClick={resetFilters}><FontAwesomeIcon icon={faUndo} /> ล้างการค้นหา</button>
-                    </div>
+                    <div className={styles.filterActions}><button onClick={resetFilters}><FontAwesomeIcon icon={faUndo} /> ล้างการค้นหา</button></div>
                 </div>
                 <div className={styles.tableHeader}>
                     <h2>รายชื่อนักศึกษา ({filteredStudents.length})</h2>
-                    <button className={styles.btnPrimary}><FontAwesomeIcon icon={faPlus} /> เพิ่มนักศึกษาใหม่</button>
+                    <button className={styles.btnPrimary} onClick={onAddNewStudent}><FontAwesomeIcon icon={faPlus} /> เพิ่มนักศึกษาใหม่</button>
                 </div>
-                <StudentTable students={filteredStudents} advisors={advisors} navigate={navigate} />
+                <StudentTable 
+                    students={filteredStudents} 
+                    advisors={advisors} 
+                    onDelete={onDeleteStudent} 
+                />
             </div>
         </section>
     );
@@ -231,14 +262,21 @@ const ManageAdvisorsSection = ({ advisors }) => {
             <h1><FontAwesomeIcon icon={faUserTie} /> จัดการรายชื่ออาจารย์</h1>
             <p>เพิ่ม แก้ไข และกำหนดบทบาทของอาจารย์ในระบบ</p>
             <div className={styles.tableCard}>
+            <div className={styles.tableCard}>
                 <div className={styles.filterCard}>
                     <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูล</h3>
                 </div>
                 <div className={styles.tableHeader}>
-                    <h2>รายชื่ออาจารย์ ({advisors.length})</h2>
-                    <button className={styles.btnPrimary}><FontAwesomeIcon icon={faPlus} /> เพิ่มอาจารย์ใหม่</button>
+                    <h2>รายชื่ออาจารย์ ({filteredAdvisors.length})</h2>
+                    <button className={styles.btnPrimary} onClick={onAddNewAdvisor}><FontAwesomeIcon icon={faPlus} /> เพิ่มอาจารย์ใหม่</button>
                 </div>
-                <UserTable users={advisors} type="advisors" />
+                
+                {/* ✅ 4. ส่งฟังก์ชัน onDelete ต่อไปให้ AdvisorTable */}
+                <AdvisorTable 
+                    advisors={filteredAdvisors} 
+                    navigate={navigate}
+                    onDelete={onDeleteAdvisor}
+                />
             </div>
         </section>
     );

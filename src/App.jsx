@@ -34,7 +34,10 @@ import AdminProfilePage from './pages/Admin_Page/AdminProfilePage';
 import AdminDocumentDetailPage from './pages/Admin_Page/AdminDocumentDetailPage';
 import ManageUsersPage from './pages/Admin_Page/ManageUsersPage';
 import ManageStudentDetailPage from './pages/Admin_Page/ManageStudentDetailPage';
-
+import AddStudentPage from './pages/Admin_Page/AddStudentPage'; 
+import ManageAdvisorDetailPage from './pages/Admin_Page/ManageAdvisorDetailPage';
+// ✅ 1. Import Component หน้าเพิ่มอาจารย์เข้ามา
+import AddAdvisorPage from './pages/Admin_Page/AddAdvisorPage';
 
 function App() {
   return (

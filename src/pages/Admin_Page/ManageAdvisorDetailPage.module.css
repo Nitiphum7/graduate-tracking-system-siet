@@ -1,4 +1,4 @@
-/* src/pages/Admin_Page/ManageStudentDetailPage.module.css */
+/* src/pages/Admin_Page/ManageAdvisorDetailPage.module.css/
 
 /* --- โครงสร้าง Layout หลัก --- */
 .pageLayout {
@@ -460,4 +460,129 @@
     font-size: 13px;
     color: #6c757d;
     word-break: break-all; /* ตัดคำถ้าอีเมลยาวเกิน */
+}
+
+/* Styles สำหรับ Checkbox (บทบาทอาจารย์) */
+.checkboxContainer {
+    display: block;
+    position: relative;
+    padding-left: 35px; /* เว้นที่สำหรับ checkbox ที่สร้างเอง */
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+    font-weight: 500;
+    color: #333;
+}
+
+/* ซ่อน checkbox เริ่มต้นของเบราว์เซอร์ */
+.checkboxContainer input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* สร้าง checkbox ที่กำหนดเอง */
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 22px;
+    width: 22px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* เมื่อเมาส์ชี้ไปที่ checkbox */
+.checkboxContainer:hover input ~ .checkmark {
+    background-color: #e9ecef;
+}
+
+/* เมื่อ checkbox ถูกเลือก */
+.checkboxContainer input:checked ~ .checkmark {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* สร้างเครื่องหมาย "ถูก" (ติ๊ก) */
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 7px;
+    top: 3px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+
+/* แสดงเครื่องหมาย "ถูก" เมื่อ checkbox ถูกเลือก */
+.checkboxContainer input:checked ~ .checkmark:after {
+    display: block;
+}
+
+
+/* --- Styles สำหรับส่วนหลักสูตรที่ได้รับมอบหมาย --- */
+.programList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* ระยะห่างระหว่างแถวของหลักสูตร */
+}
+
+.programItem {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* ระยะห่างระหว่าง dropdown กับปุ่มลบ */
+    margin-bottom: 15px; /* ✅ เพิ่มบรรทัดนี้เพื่อสร้างระยะห่างด้านล่าง */
+}
+
+.programItem select {
+    flex-grow: 1; /* ทำให้ dropdown ยืดเต็มความกว้าง */
+}
+
+.removeBtn, .addBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+
+.removeBtn {
+    background-color: #fff1f0;
+    color: #d4380d;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.removeBtn:hover {
+    background-color: #ffccc7;
+}
+
+.addBtn {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ced4da;
+    padding: 10px 15px;
+    font-size: 14px;
+    gap: 8px;
+    margin-top: 20px; /* ระยะห่างจากรายการสุดท้าย */
+}
+
+.addBtn:hover {
+    background-color: #e9ecef;
+}
+
+/* ✅✅✅ เพิ่ม Class นี้เข้าไปใหม่ ✅✅✅ */
+.textCenter {
+    text-align: center;
 }
