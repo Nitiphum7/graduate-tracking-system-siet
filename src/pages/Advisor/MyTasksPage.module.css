@@ -1,0 +1,184 @@
+/* --- เพิ่มสไตล์สำหรับ Action Card ของ Advisor --- */
+.actionCard {
+    background-color: #fffde7; /* สีเหลืองอ่อน */
+    border: 1px solid #ffc107; /* สีเหลือง */
+    margin-top: 1.5rem;
+}
+
+.actionCard h3 {
+    margin-top: 0;
+    color: #856404; /* สีน้ำตาลเข้ม */
+}
+
+.actionCard textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.buttonGroup {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.buttonGroup button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.buttonGroup button:hover {
+    opacity: 0.85;
+}
+
+.buttonGroup button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.approveBtn {
+    background-color: #28a745; /* Green */
+}
+
+.rejectBtn {
+    background-color: #dc3545; /* Red */
+}
+
+/* --- สไตล์เดิม (ถ้ายังไม่มีให้คัดลอกไปทั้งหมด) --- */
+.detailContainer {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.documentContent {
+    flex: 3;
+}
+
+.documentSidebar {
+    flex: 1;
+}
+
+.contentHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.backLink {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+.backLink:hover {
+    text-decoration: underline;
+}
+
+.detailCard {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+}
+
+.statusCard {
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    color: white;
+}
+
+.statusText p {
+    margin: 0;
+    font-size: 1rem;
+    opacity: 0.9;
+}
+.statusText h2 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.infoList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.infoList li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.infoList li:last-child {
+    border-bottom: none;
+}
+.infoList label {
+    color: #666;
+}
+
+.historyList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.historyList li {
+    position: relative;
+    padding-left: 1.5rem;
+    padding-bottom: 1rem;
+    border-left: 2px solid #e9ecef;
+}
+.historyList li:last-child {
+    border-left: 2px solid transparent;
+}
+.historyList li::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #007bff;
+}
+
+.logAction {
+    font-weight: bold;
+}
+.logActor, .logDate {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+.logComment {
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+
+.commentBox {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    min-height: 50px;
+}
+
+
+/* --- Status Colors --- */
+.approved { background-color: #28a745; border-left: 5px solid #218838; }
+.rejected { background-color: #dc3545; border-left: 5px solid #c82333; }
+.pending { background-color: #ffc107; color: #333; border-left: 5px solid #e0a800; }
+.pending h2 { color: #333; }

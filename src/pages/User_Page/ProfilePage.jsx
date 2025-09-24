@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom'; // 👈 1. เพิ่ม useNavigate
 import styles from './ProfilePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faEdit, faTrash, faUserCircle, faGraduationCap, faSignature, faPaperclip, faPencilAlt, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
 import Cropper from 'react-cropper';
-import 'cropperjs/dist/cropper.css'; // อย่าลืม import CSS ของ Cropper
+import 'cropperjs/dist/cropper.css';
 import SignaturePad from 'react-signature-pad-wrapper';
 
-// --- Helper Functions ---
+// --- Helper Functions (เหมือนเดิม) ---
 const formatThaiDate = (isoString) => {
     if (!isoString) return '-';
     return new Date(isoString).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -25,19 +26,18 @@ const getStatusClass = (status) => {
 // --- Main Component ---
 function ProfilePage() {
     const { user: authUser } = useAuth();
+    const navigate = useNavigate(); // 👈 2. เรียกใช้งาน useNavigate
     const [currentUser, setCurrentUser] = useState(null);
     const [processedData, setProcessedData] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const API_URL = 'http://localhost:3000';
     
-    // UI States
+    // ... (UI States และ Modal States เหมือนเดิม) ...
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [phoneInput, setPhoneInput] = useState('');
     const [profileImage, setProfileImage] = useState('/assets/images/placeholder.png');
     const [signatureImage, setSignatureImage] = useState(null);
-    
-    // Modal States & Refs
     const [imageToCrop, setImageToCrop] = useState(null);
     const [isCropModalOpen, setCropModalOpen] = useState(false);
     const cropperRef = useRef(null);
@@ -46,17 +46,34 @@ function ProfilePage() {
     const signaturePadRef = useRef(null);
     const signatureFileInputRef = useRef(null);
 
+
     useEffect(() => {
         const loadProfileData = async () => {
             if (!authUser) { setLoading(false); return; }
-
+            setLoading(true);
             try {
-                setLoading(true);
+                // ✅✅✅ --- ส่วนที่แก้ไข --- ✅✅✅
+                // 1. ดึง Token จาก Local Storage
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error("No token found!");
+                    navigate('/login'); // ถ้าไม่มี token ให้ไปหน้า login
+                    return;
+                }
+
+                // 2. สร้าง Headers สำหรับยืนยันตัวตน
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // 3. แนบ Headers ไปกับทุก fetch request
                 const responses = await Promise.all([
-                    fetch(`${API_URL}/api/profile/${authUser.id}`),
-                    fetch(`${API_URL}/api/advisors`),
-                    fetch(`${API_URL}/api/submissions/student/${authUser.id}`)
+                    fetch(`${API_URL}/api/profile/${authUser.id}`, { headers }),
+                    fetch(`${API_URL}/api/advisors`, { headers }),
+                    fetch(`${API_URL}/api/submissions/student/${authUser.id}`, { headers })
                 ]);
+                // ✅✅✅ --- จบส่วนที่แก้ไข --- ✅✅✅
 
                 for (const res of responses) {
                     if (!res.ok) throw new Error(`Failed to fetch data (status: ${res.status})`);
@@ -66,24 +83,17 @@ function ProfilePage() {
                     responses.map(res => res.json())
                 );
                 
+                // ... (ส่วนประมวลผลข้อมูลที่เหลือเหมือนเดิม) ...
                 const findAdvisorName = (advisorId) => {
                     if (!advisorId) return '-';
                     const advisor = advisors.find(a => a.advisor_id === advisorId);
                     return advisor ? `${advisor.prefix_th}${advisor.first_name_th} ${advisor.last_name_th}`.trim() : '-';
                 };
-
                 const approvedStatusList = ['อนุมัติแล้ว', 'อนุมัติ', 'ผ่าน', 'ผ่านเกณฑ์'];
                 const approvedDocs = allUserDocuments.filter(doc => approvedStatusList.includes(doc.status_name));
-
-                const approvedEngMasterDoc = approvedDocs.find(doc => 
-                    doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.โท')
-                );
-                const approvedEngPhdDoc = approvedDocs.find(doc => 
-                    doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.เอก')
-                );
-                const approvedQEDoc = approvedDocs.find(doc => 
-                    doc.type_name.includes('วัดคุณสมบัติ')
-                );
+                const approvedEngMasterDoc = approvedDocs.find(doc => doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.โท'));
+                const approvedEngPhdDoc = approvedDocs.find(doc => doc.type_name.includes('ภาษาอังกฤษ') && doc.type_name.includes('ป.เอก'));
+                const approvedQEDoc = approvedDocs.find(doc => doc.type_name.includes('วัดคุณสมบัติ'));
 
                 setCurrentUser(userProfile);
                 setPhoneInput(userProfile.phone || '');
@@ -111,15 +121,19 @@ function ProfilePage() {
         };
 
         loadProfileData();
-    }, [authUser]);
+    }, [authUser, navigate]); // 👈 3. เพิ่ม navigate เข้าไปใน dependency array
 
-    // --- Event Handlers (โค้ดส่วนนี้เป็นของคุณทั้งหมด ไม่ได้แก้ไข) ---
+    // --- Event Handlers (เพิ่มการส่ง Token) ---
     const handleSavePhone = async () => {
         if (!currentUser) return;
         try {
+            const token = localStorage.getItem('token'); // ✅ ดึง Token
             const response = await fetch(`${API_URL}/api/profile/${currentUser.id}/phone`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // ✅ ส่ง Token
+                },
                 body: JSON.stringify({ phone: phoneInput })
             });
             if (!response.ok) throw new Error('ไม่สามารถบันทึกเบอร์โทรศัพท์ได้');
@@ -131,6 +145,61 @@ function ProfilePage() {
         }
     };
 
+    const handleSaveSignature = async () => {
+        if (!currentUser) return;
+        let signatureData = null;
+        if (signatureTab === 'draw') {
+            if (signaturePadRef.current?.isEmpty()) return alert("กรุณาวาดลายเซ็นของคุณ");
+            signatureData = signaturePadRef.current.toDataURL('image/png');
+        } else {
+            const file = signatureFileInputRef.current?.files[0];
+            if (!file) return alert("กรุณาเลือกไฟล์รูปภาพ");
+            signatureData = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        }
+        try {
+            const token = localStorage.getItem('token'); // ✅ ดึง Token
+            const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // ✅ ส่ง Token
+                },
+                body: JSON.stringify({ signatureData })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Server Error');
+            setSignatureImage(`${API_URL}${result.data.signature_image_url}`);
+            alert("บันทึกลายเซ็นใหม่เรียบร้อยแล้ว");
+            setSignatureModalOpen(false);
+        } catch (err) {
+            alert(`เกิดข้อผิดพลาด: ${err.message}`);
+        }
+    };
+
+    const handleDeleteSignature = async () => {
+        if (window.confirm("คุณต้องการลบลายเซ็นดิจิทัลใช่หรือไม่?")) {
+            if (!currentUser) return;
+            try {
+                const token = localStorage.getItem('token'); // ✅ ดึง Token
+                const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` } // ✅ ส่ง Token
+                });
+                if (!response.ok) throw new Error('ไม่สามารถลบลายเซ็นได้');
+                setSignatureImage(null);
+                alert("ลบลายเซ็นเรียบร้อยแล้ว");
+                setSignatureModalOpen(false);
+            } catch(err) {
+                 alert(`เกิดข้อผิดพลาด: ${err.message}`);
+            }
+        }
+    };
+    
+    // ... (ส่วนของ handleProfilePictureChange, handleConfirmCrop และ Render Logic เหมือนเดิม) ...
     const handleProfilePictureChange = (e) => {
         const file = e.target.files[0];
         if (file && file.type.startsWith('image/')) {
@@ -153,63 +222,16 @@ function ProfilePage() {
             setImageToCrop(null);
         }
     };
-
-    const handleSaveSignature = async () => {
-        if (!currentUser) return;
-        let signatureData = null;
-        if (signatureTab === 'draw') {
-            if (signaturePadRef.current?.isEmpty()) return alert("กรุณาวาดลายเซ็นของคุณ");
-            signatureData = signaturePadRef.current.toDataURL('image/png');
-        } else {
-            const file = signatureFileInputRef.current?.files[0];
-            if (!file) return alert("กรุณาเลือกไฟล์รูปภาพ");
-            signatureData = await new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
-        }
-        try {
-            const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ signatureData })
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'Server Error');
-            setSignatureImage(`${API_URL}${result.data.signature_image_url}`);
-            alert("บันทึกลายเซ็นใหม่เรียบร้อยแล้ว");
-            setSignatureModalOpen(false);
-        } catch (err) {
-            alert(`เกิดข้อผิดพลาด: ${err.message}`);
-        }
-    };
-
-    const handleDeleteSignature = async () => {
-        if (window.confirm("คุณต้องการลบลายเซ็นดิจิทัลใช่หรือไม่?")) {
-            if (!currentUser) return;
-            try {
-                const response = await fetch(`${API_URL}/api/users/${currentUser.id}/signature`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('ไม่สามารถลบลายเซ็นได้');
-                setSignatureImage(null);
-                alert("ลบลายเซ็นเรียบร้อยแล้ว");
-                setSignatureModalOpen(false);
-            } catch(err) {
-                 alert(`เกิดข้อผิดพลาด: ${err.message}`);
-            }
-        }
-    };
-
-    // --- Render Logic ---
+    
     if (loading) return <div className={styles.loadingText}>กำลังโหลด...</div>;
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
     if (!currentUser) return <div className={styles.loadingText}>ไม่พบข้อมูลผู้ใช้</div>;
-
     const fullname = `${currentUser.prefix_th || ''} ${currentUser.first_name_th || ''} ${currentUser.last_name_th || ''}`.trim();
 
     return (
         <>
             <main className={styles.profileContainer}>
+                {/* ... (ส่วน JSX ที่ใช้แสดงผลทั้งหมดเหมือนเดิม) ... */}
                 <h1><FontAwesomeIcon icon={faUserCircle} /> โปรไฟล์ของฉัน</h1>
                 <div className={styles.profileLayout}>
                     {/* --- Left Column --- */}
@@ -260,13 +282,13 @@ function ProfilePage() {
                         </section>
                         <section className={styles.profileCard}>
                             <h3><FontAwesomeIcon icon={faSignature} /> ลายเซ็นดิจิทัล</h3>
-                               <div className={styles.signatureDisplayArea}>
-                                  {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
-                               </div>
-                               <div className={styles.signatureActions}>
-                                  <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
-                                  <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature} disabled={!signatureImage}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
-                               </div>
+                                <div className={styles.signatureDisplayArea}>
+                                    {signatureImage ? <img src={signatureImage} alt="ลายเซ็น" /> : <p>ยังไม่มีลายเซ็น</p>}
+                                </div>
+                                <div className={styles.signatureActions}>
+                                    <button className={styles.btn} onClick={() => setSignatureModalOpen(true)}><FontAwesomeIcon icon={faEdit} /> แก้ไขลายเซ็น</button>
+                                    <button className={`${styles.btn} ${styles.btnDanger}`} onClick={handleDeleteSignature} disabled={!signatureImage}><FontAwesomeIcon icon={faTrash} /> ลบลายเซ็น</button>
+                                </div>
                         </section>
                     </div>
                     {/* --- Right Column --- */}
@@ -299,9 +321,9 @@ function ProfilePage() {
                             <div className={styles.statusGroup}>
                                 <h4 className={styles.groupTitle}>การสอบวิทยานิพนธ์ขั้นสุดท้าย</h4>
                                 <ul className={styles.statusListDetailed}>
-                                     <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
-                                     <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || 'ยังไม่ยื่น'}</span></li>
-                                     <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
+                                        <li><label>วันที่สอบขั้นสุดท้าย:</label><span>{formatThaiDate(currentUser.final_defense_date)}</span></li>
+                                        <li><label>สถานะการสอบ:</label><span className={getStatusClass(currentUser.final_defense_status)}>{currentUser.final_defense_status || 'ยังไม่ยื่น'}</span></li>
+                                        <li><label>วันที่สำเร็จการศึกษา:</label><span>{formatThaiDate(currentUser.graduation_date)}</span></li>
                                 </ul>
                             </div>
                             <div className={styles.statusGroup}>
@@ -347,7 +369,7 @@ function ProfilePage() {
                 </div>
             </main>
 
-            {/* --- Modals (โค้ด Modal ของคุณ) --- */}
+            {/* --- Modals --- */}
             {isCropModalOpen && (
                 <div className={styles.modalOverlay}>
                     <div className={`${styles.modalBox} ${styles.cropModalBox}`}>

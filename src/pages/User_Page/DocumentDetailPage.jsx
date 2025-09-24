@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './DocumentDetailPage.module.css';
 import { useAuth } from '../../hooks/useAuth.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faHistory } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faHistory, faSpinner, faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons';
 
-// Import Components
+// Import Components (เหมือนเดิม)
 import Form1Detail from '../../components/document-details/Form1Detail';
 import Form2Detail from '../../components/document-details/Form2Detail';
 import Form3Detail from '../../components/document-details/Form3Detail';
@@ -31,19 +31,28 @@ function DocumentDetailPage() {
     const { docId } = useParams();
     const { user: loggedInUser, loading: authLoading, token } = useAuth();
     const navigate = useNavigate();
-    
+    const location = useLocation(); // ✅ 1. เพิ่ม useLocation เพื่อรับ taskId
+
     const [docData, setDocData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const API_URL = 'http://localhost:3000';
+
+    // ✅ 2. เพิ่ม State สำหรับการอนุมัติของ Advisor
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [comment, setComment] = useState('');
+
+    const taskId = location.state?.taskId; // ดึง taskId ที่ส่งมาจากหน้า MyTasksPage
+    const approverRoles = ['advisor', 'program_chair', 'executive']; // Role ที่อนุมัติได้
+    const isApprover = loggedInUser && approverRoles.includes(loggedInUser.role_name);
 
     useEffect(() => {
         if (authLoading || !loggedInUser) return;
-        
+
         const loadInitialData = async () => {
+            // ... (ส่วนดึงข้อมูลเหมือนเดิม) ...
             try {
                 setLoading(true);
-                const response = await fetch(`${API_URL}/api/submissions/${docId}`, {
+                const response = await fetch(`http://localhost:3000/api/submissions/${docId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) throw new Error(`ไม่สามารถดึงข้อมูลได้ (Error: ${response.status})`);
@@ -56,9 +65,40 @@ function DocumentDetailPage() {
             }
         };
         loadInitialData();
-    }, [docId, authLoading, loggedInUser, navigate, token]);
+    }, [docId, authLoading, loggedInUser, token]);
 
-    // ✅✅✅ เพิ่มฟังก์ชัน statusClass ที่หายไปกลับเข้ามา ✅✅✅
+    // ✅ 3. เพิ่มฟังก์ชันสำหรับกดอนุมัติ/ตีกลับ
+    const handleApprovalAction = async (status) => {
+        if (!taskId) {
+            alert("ข้อผิดพลาด: ไม่พบ Task ID สำหรับการอนุมัติ!");
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`http://localhost:3000/api/approvals/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ newStatus: status, comment: comment })
+            });
+            if (!response.ok) {
+                 const errData = await response.json();
+                 throw new Error(errData.message || 'เกิดข้อผิดพลาดในการดำเนินการ');
+            }
+
+            alert(`ดำเนินการ "${status === 'approved' ? 'อนุมัติ' : 'ตีกลับ'}" สำเร็จ!`);
+            navigate('/advisor/tasks'); // กลับไปหน้ารายการ Task
+
+        } catch (err) {
+            alert(`เกิดข้อผิดพลาด: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
     const statusClass = (statusName) => {
         if (!statusName) return styles.pending;
         const approved = ['อนุมัติ', 'อนุมัติแล้ว', 'ผ่าน', 'ผ่านเกณฑ์'];
@@ -71,36 +111,71 @@ function DocumentDetailPage() {
     if (loading || authLoading) return <div className={styles.loadingText}>กำลังโหลด...</div>;
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
     if (!docData) return <div>ไม่พบข้อมูลเอกสาร</div>;
-    
-    const { documentDetail = {}, advisors = [], allUserDocs = [] } = docData || {};
+
+    const { documentDetail = {} } = docData || {};
     const DetailComponent = detailComponentMap[documentDetail.document_type_id];
-    
-    const userProfileData = {
-        ...documentDetail,
-        fullname: `${documentDetail.prefix_th || ''} ${documentDetail.first_name_th || ''} ${documentDetail.last_name_th || ''}`.trim()
-    };
 
     return (
         <main className={styles.detailContainer}>
             <div className={styles.documentContent}>
                 <div className={styles.contentHeader}>
                     <h1>{documentDetail.title || 'กำลังโหลด...'}</h1>
-                    <Link to="/student/status" className={styles.backLink}>
-                        <FontAwesomeIcon icon={faArrowLeft} /> กลับหน้ารวมสถานะ
+                    {/* ✅ 4. แก้ไขปุ่ม "กลับ" ให้ทำงานตาม Role */}
+                    <Link 
+                        to={isApprover ? "/advisor/tasks" : "/student/status"} 
+                        className={styles.backLink}
+                    >
+                        <FontAwesomeIcon icon={faArrowLeft} /> 
+                        {isApprover ? "กลับหน้ารายการอนุมัติ" : "กลับหน้ารวมสถานะ"}
                     </Link>
                 </div>
+                
+                {/* ... (ส่วนแสดงรายละเอียดเอกสารเหมือนเดิม) ... */}
                 <div className={styles.detailCard}>
                     {DetailComponent ? (
                         <DetailComponent 
                             doc={documentDetail} 
-                            user={userProfileData}
-                            advisors={advisors}
-                            allUserDocs={allUserDocs}
+                            user={documentDetail}
+                            advisors={docData.advisors || []}
                         />
                     ) : (
                         <p>ยังไม่มี Component สำหรับแสดงรายละเอียดของเอกสารประเภทนี้</p>
                     )}
                 </div>
+
+
+                {/* ✅ 5. เพิ่ม "แผงควบคุมสำหรับ Advisor" ที่จะแสดงเมื่อเงื่อนไขถูกต้อง */}
+                {isApprover && taskId && (
+                    <div className={`${styles.detailCard} ${styles.actionCard}`}>
+                        <h3>ดำเนินการอนุมัติ</h3>
+                        <textarea
+                            rows="4"
+                            placeholder="เพิ่มความคิดเห็น (ถ้ามี)..."
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            disabled={isSubmitting}
+                        />
+                        <div className={styles.buttonGroup}>
+                            <button 
+                                className={styles.rejectBtn} 
+                                onClick={() => handleApprovalAction('rejected')} 
+                                disabled={isSubmitting}
+                            >
+                                <FontAwesomeIcon icon={faThumbsDown} /> ตีกลับ / ไม่อนุมัติ
+                            </button>
+                            <button 
+                                className={styles.approveBtn} 
+                                onClick={() => handleApprovalAction('approved')} 
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? <><FontAwesomeIcon icon={faSpinner} spin /> กำลังดำเนินการ...</>
+                                             : <><FontAwesomeIcon icon={faThumbsUp} /> อนุมัติ</>}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
                 <div className={styles.detailCard}>
                     <h3>ความคิดเห็นเพิ่มเติม (จากผู้ยื่น)</h3>
                     <p className={styles.commentBox}>{documentDetail.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
@@ -112,21 +187,23 @@ function DocumentDetailPage() {
                     </div>
                 )}
             </div>
+
+            {/* ... (Sidebar เหมือนเดิม) ... */}
             <aside className={styles.documentSidebar}>
-               <div className={`${styles.statusCard} ${statusClass(documentDetail.status)}`}>
-                   <div className={styles.statusText}>
-                       <p>สถานะปัจจุบัน</p>
-                       <h2>{documentDetail.status}</h2>
-                   </div>
-               </div>
-               <div className={styles.detailCard}>
+                <div className={`${styles.statusCard} ${statusClass(documentDetail.status)}`}>
+                    <div className={styles.statusText}>
+                        <p>สถานะปัจจุบัน</p>
+                        <h2>{documentDetail.status}</h2>
+                    </div>
+                </div>
+                <div className={styles.detailCard}>
                     <h3>ข้อมูลการยื่น</h3>
                     <ul className={styles.infoList}>
                         <li><label>ประเภทเอกสาร:</label> <span>{documentDetail.title}</span></li>
                         <li><label>วันที่ยื่น:</label> <span>{formatThaiDateTime(documentDetail.submission_date)}</span></li>
                         <li><label>วันที่ดำเนินการล่าสุด:</label> <span>{formatThaiDateTime(documentDetail.action_date)}</span></li>
                     </ul>
-               </div>
+                </div>
                 <div className={styles.detailCard}>
                     <h3><FontAwesomeIcon icon={faHistory} /> ประวัติการดำเนินการ</h3>
                     <ul className={styles.historyList}>

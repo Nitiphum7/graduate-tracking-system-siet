@@ -8,9 +8,9 @@ import AdminLayout from './layouts/AdminLayout';
 
 // --- Public Pages ---
 import LoginPage from './pages/Auth_Page/Login';
+import SignaturePage from './pages/User_Page/SignaturePage'; //ย้ายมาอยู่ตรงนี้จะเหมาะสมกว่า
 
 // --- Student & User Pages ---
-import SignaturePage from './pages/User_Page/SignaturePage';
 import HomePage from './pages/User_Page/HomePage'; 
 import StatusPage from './pages/User_Page/StatusPage';
 import DocumentDetailPage from './pages/User_Page/DocumentDetailPage';
@@ -25,6 +25,9 @@ import ProfilePage from './pages/User_Page/ProfilePage';
 import GuidePage from './pages/User_Page/GuidePage';
 import TemplatesPage from './pages/User_Page/TemplatesPage'; 
 
+// --- Advisor Pages ---
+import MyTasksPage from './pages/Advisor/MyTasksPage'; // ชื่อไฟล์ที่ถูกต้องคือ MyTasksPage
+
 // --- Admin Pages ---
 import AdminHomePage from './pages/Admin_Page/AdminHomePage';
 import AdminProfilePage from './pages/Admin_Page/AdminProfilePage';
@@ -34,45 +37,83 @@ import ManageStudentDetailPage from './pages/Admin_Page/ManageStudentDetailPage'
 
 
 function App() {
-  return (
-    <Routes>
-      {/* --- Public Routes --- */}
-      <Route path="/" element={<Navigate replace to="/login" />} />
-      <Route path="/login" element={<LoginPage />} />
-        <Route path="signature" element={<SignaturePage />} />
+  return (
+    <Routes>
+      {/* --- Public Routes --- */}
+      <Route path="/" element={<Navigate replace to="/login" />} />
+      <Route path="/login" element={<LoginPage />} />
+      {/* Signature ควรเป็นหน้าที่เข้าถึงได้หลัง Login แต่ยังไม่จำเป็นต้องมี Layout เต็ม */}
+      <Route path="/signature" element={<SignaturePage />} /> 
 
-      {/* --- Student Routes (Nested under UserLayout) --- */}
-      <Route path="/student" element={<UserLayout />}>
-        <Route index element={<Navigate replace to="home" />} /> 
-        <Route path="home" element={<HomePage />} />
-        <Route path="status" element={<StatusPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="form1" element={<Form1Page />} />
-        <Route path="form2" element={<Form2Page />} />
-        <Route path="form3" element={<Form3Page />} />
-        <Route path="form4" element={<Form4Page />} />
-        <Route path="form5" element={<Form5Page />} />
-        <Route path="form6" element={<Form6Page />} />
-        <Route path="exam-submit" element={<ExamSubmitPage />} />
-        <Route path="docs/:docId" element={<DocumentDetailPage />} />
+      {/* --- Student Routes (Nested under UserLayout) --- */}
+      <Route path="/student" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} /> 
+        <Route path="home" element={<HomePage />} />
+        <Route path="status" element={<StatusPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="form1" element={<Form1Page />} />
+        <Route path="form2" element={<Form2Page />} />
+        <Route path="form3" element={<Form3Page />} />
+        <Route path="form4" element={<Form4Page />} />
+        <Route path="form5" element={<Form5Page />} />
+        <Route path="form6" element={<Form6Page />} />
+        <Route path="exam-submit" element={<ExamSubmitPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} />
         <Route path="guide" element={<GuidePage />} />
         <Route path="templates" element={<TemplatesPage />} />
-      </Route>
-      
-      {/* --- Admin Routes (Nested under AdminLayout) --- */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate replace to="home" />} />
-        <Route path="home" element={<AdminHomePage />} />
-        {/* ✅ 2. เพิ่ม Route สำหรับหน้าจัดการผู้ใช้งาน */}
+      </Route>
+      
+      {/* --- ✅✅✅ Advisor & Approver Routes (Nested under UserLayout) ✅✅✅ --- */}
+      {/* ใช้ UserLayout เดียวกับ Student เพื่อให้หน้าตาเหมือนกัน */}
+      <Route path="/advisor" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<MyTasksPage />} />
+        {/* ถ้ามีหน้ารายละเอียดเอกสารสำหรับ Advisor ก็ใช้ตัวเดียวกับ Student ได้ */}
+        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+        {/* อาจจะมีหน้า Profile ของตัวเอง */}
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      <Route path="/program_chair" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="้home" />} />
+        <Route path="home" element={<MyTasksPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      <Route path="/assistant_rector" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<MyTasksPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+        <Route path="/external_professor" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<MyTasksPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+        <Route path="/executive" element={<UserLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<MyTasksPage />} />
+        <Route path="docs/:docId" element={<DocumentDetailPage />} /> 
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* --- Admin Routes (Nested under AdminLayout) --- */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate replace to="home" />} />
+        <Route path="home" element={<AdminHomePage />} />
         <Route path="manage-users" element={<ManageUsersPage />} />
         <Route path="manage-users/student/:studentId" element={<ManageStudentDetailPage />} />
-        
-        <Route path="profile" element={<AdminProfilePage />} />
-        <Route path="docs/:docId" element={<AdminDocumentDetailPage />} />
-      </Route>
+        <Route path="profile" element={<AdminProfilePage />} />
+        <Route path="docs/:docId" element={<AdminDocumentDetailPage />} />
+      </Route>
 
-    </Routes>
-  );
+    </Routes>
+  );
 }
 
 export default App;

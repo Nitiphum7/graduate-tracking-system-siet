@@ -128,11 +128,9 @@ function Form4Page() {
                 student_user_id: user.id,
                 student_comment: formData.comment,
                 form_details: {
-                    details: {
                         document_types: documentTypesData,
                         evaluators: formData.evaluators
                     }
-                }
             };
 
             const response = await fetch(`${API_URL}/api/submissions/form4`, {
