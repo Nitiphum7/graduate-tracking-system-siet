@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { Cropper } from 'react-cropper';
 import { useNavigate } from 'react-router-dom'; // 👈 1. เพิ่ม useNavigate
 import styles from './ProfilePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCamera, faEdit, faTrash, faUserCircle, faGraduationCap, faSignature, faPaperclip, faPencilAlt, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
-import Cropper from 'react-cropper';
+import {
+  faCamera, faEdit, faTrash, faUserCircle, faGraduationCap,
+  faSignature, faPaperclip, faPencilAlt, faSave, faTimes,
+  faClipboardCheck 
+} from '@fortawesome/free-solid-svg-icons';
 import 'cropperjs/dist/cropper.css';
 import SignaturePad from 'react-signature-pad-wrapper';
+import AccountManagementSection from '../../components/AccountManagementSection';
 
 // --- Helper Functions (เหมือนเดิม) ---
 const formatThaiDate = (isoString) => {

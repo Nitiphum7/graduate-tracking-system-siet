@@ -6,9 +6,10 @@ import { useAuth } from '../../hooks/useAuth'; // ✅ 1. Import useAuth
 import SignaturePad from 'react-signature-pad-wrapper';
 import styles from './SignaturePage.module.css';
 import logo from '../../assets/images/logo.png';
+import { updateUserSignature } from '../../utils/api';
 
 function SignaturePage() {
-    const { user, token, login } = useAuth(); // ✅ 2. ดึง user, token, และ "ฟังก์ชัน login" มาจาก Context
+    const { user, updateUserState } = useAuth();  // ✅ 2. ดึง user, token, และ "ฟังก์ชัน login" มาจาก Context
     const navigate = useNavigate();
     
     // State ของ UI ไม่มีการเปลี่ยนแปลง
@@ -46,43 +47,20 @@ function SignaturePage() {
         }
 
         try {
-            // ✅ 3. ใช้ "user" จาก useAuth แทนการอ่านจาก localStorage โดยตรง
-            if (!user || !user.id) {
-                alert("⚠️ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
-                navigate('/login');
-                return;
-            }
+            // ⭐ เรียกใช้ API ผ่านฟังก์ชันใหม่จาก api.js ทำให้โค้ดสะอาดและปลอดภัย
+            const response = await updateUserSignature(user.id, signatureData);
+            const result = response.data;
 
-            const response = await fetch(`${API_URL}/api/users/${user.id}/signature`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ signatureData: signatureData })
-            });
-            
-            const result = await response.json();
+            // ⭐ อัปเดตข้อมูล user ส่วนกลางผ่านฟังก์ชันใหม่ `updateUserState`
+            updateUserState(result.data);
 
-            if (!response.ok) {
-                throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกลายเซ็น');
-            }
-
-            // ✅ 4. อัปเดตข้อมูล user ส่วนกลางผ่านฟังก์ชัน login
-            // Server จะตอบกลับมาพร้อมข้อมูลใหม่ (has_signed: true)
-            const updatedUser = { ...user, ...result.data };
-            login(updatedUser, token); // การทำแบบนี้จะอัปเดตทั้ง Context และ localStorage
-
-            alert("✅ บันทึกลายเซ็นของคุณเรียบร้อยแล้ว");
-
-            // ✅ 5. แก้ไข Bug การนำทาง ใช้ user.role_name
-            navigate(`/${user.role_name}/home`);
-
-        } catch (error) {
-            alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
-            console.error("Signature submission failed:", error);
-        }
-    };
+            alert("✅ บันทึกลายเซ็นของคุณเรียบร้อยแล้ว");
+            navigate(`/${user.role_name}/home`);
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || error.message;
+            alert(`❌ เกิดข้อผิดพลาด: ${errorMessage}`);
+        }
+    };
 
     return (
         <div className={styles.signaturePageContainer}>

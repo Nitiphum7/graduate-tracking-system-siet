@@ -1,0 +1,343 @@
+/* --- Base Layout --- */
+.profileContainer {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.profileContainer h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* --- Columns Layout --- */
+.profileLayout {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.mainProfileColumn, .sideProfileColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* --- Card Base Styling --- */
+.profileCard {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    border: 1px solid #f0f0f0;
+}
+
+.profileCard h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* --- Profile Details Grid --- */
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.detailsGrid label {
+    font-weight: 500;
+    color: #6c757d;
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.detailsGrid span {
+    font-weight: 600;
+    color: #343a40;
+    display: block;
+    font-size: 1rem;
+}
+
+/* --- Role and Program Lists --- */
+.roleList, .programList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.roleList li, .programList li {
+    padding: 0.8rem 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+    color: #343a40;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.roleList li:last-child, .programList li:last-child {
+    border-bottom: none;
+}
+
+.roleList li:hover, .programList li:hover {
+    background-color: #f8f9fa;
+}
+
+.programName {
+    font-weight: 600;
+}
+
+.programLevel {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+/* --- Account Management Section Styles --- */
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .formGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.formGroup label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.formActions {
+    margin-top: 1.5rem;
+    text-align: right;
+}
+
+.btnPrimary {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background-color: #a12c62;
+}
+
+.btnPrimary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.messageBox {
+    padding: 1rem;
+    margin-top: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.messageBox.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c2c7;
+}
+
+.messageBox.success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+/* --- Signature Section Styles --- */
+.signatureDisplayArea {
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.signatureDisplayArea img {
+    max-width: 100%;
+    max-height: 100px;
+}
+
+.signatureDisplayArea p {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.signatureActions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+.btn:hover {
+    background-color: #f8f9fa;
+}
+
+.btnDanger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.btnDanger:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+.btnDanger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #fff;
+    color: #dc3545;
+}
+
+/* --- Signature Modal Styles --- */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalBox {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 500px;
+    overflow: hidden;
+}
+.modalBox h3 {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 1.25rem;
+}
+
+.signatureModalBox {
+    max-width: 600px;
+}
+
+.canvasWrapper {
+    padding: 1rem;
+}
+
+.signatureCanvas {
+    width: 100%;
+    height: 250px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    cursor: crosshair;
+}
+
+.modalActionsStacked {
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+.mainActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.secondaryActions {
+    text-align: right;
+    margin-top: 10px;
+}
+.btnText {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.btnSecondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+.btnSecondary:hover {
+    background-color: #5a6268;
+}
+
+/* --- Loading & Error --- */
+.loadingText, .errorText {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+}
+.errorText { 
+    color: #dc3545;
+}
+
+/* --- Responsive Layout --- */
+@media (max-width: 992px) {
+    .profileLayout {
+        grid-template-columns: 1fr;
+    }
+}

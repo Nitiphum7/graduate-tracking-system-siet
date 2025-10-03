@@ -1,184 +1,129 @@
-/* --- เพิ่มสไตล์สำหรับ Action Card ของ Advisor --- */
-.actionCard {
-    background-color: #fffde7; /* สีเหลืองอ่อน */
-    border: 1px solid #ffc107; /* สีเหลือง */
-    margin-top: 1.5rem;
+/* --- Base Page Layout --- */
+.pageContainer {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.actionCard h3 {
-    margin-top: 0;
-    color: #856404; /* สีน้ำตาลเข้ม */
-}
-
-.actionCard textarea {
-    width: 100%;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-}
-
-.buttonGroup {
+/* --- Content Header & Description --- */
+.contentSection h1 {
+    font-size: 2rem;
+    color: #343a40;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
     gap: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1rem;
 }
 
-.buttonGroup button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-weight: bold;
+.pageDescription {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* --- Loading & Error State --- */
+.loadingContainer, .errorContainer {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.2rem;
+    color: #6c757d; /* 🎨 Changed to a neutral grey */
+}
+
+.errorContainer {
+    color: #dc3545; /* Red for errors */
+}
+
+/* --- Table Card Container --- */
+.tableCard {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); 
+    overflow: hidden;
+}
+
+/* --- Table Styling --- */
+.tableContainer {
+    overflow-x: auto;
+}
+
+.submissionTable {
+    width: 100%;
+    border-collapse: separate; 
+    border-spacing: 0; 
+}
+
+.tableCard thead {
+    background-color: #f8f9fa;
+}
+
+.tableCard th {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 700;
+    color: #343a40;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tableCard td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0; 
+    color: #495057;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.tableCard tbody tr:last-child td {
+    border-bottom: none; 
+}
+
+/* 🎨 Theme Change: Changed hover color */
+.tableCard tbody tr:hover {
+    background-color: #fdf2f7; /* Light pink on row hover */
     cursor: pointer;
-    transition: opacity 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
-.buttonGroup button:hover {
-    opacity: 0.85;
+/* --- Clickable Cell Style (e.g., Document Name) --- */
+/* 🎨 Theme Change: Changed link color from blue to theme color */
+.clickableCell {
+    font-weight: 600;
+    color: var(--color-primary); /* Use primary theme color */
+    cursor: pointer;
+    transition: color 0.2s;
 }
 
-.buttonGroup button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.approveBtn {
-    background-color: #28a745; /* Green */
-}
-
-.rejectBtn {
-    background-color: #dc3545; /* Red */
-}
-
-/* --- สไตล์เดิม (ถ้ายังไม่มีให้คัดลอกไปทั้งหมด) --- */
-.detailContainer {
-    display: flex;
-    gap: 1.5rem;
-    padding: 1rem;
-}
-
-.documentContent {
-    flex: 3;
-}
-
-.documentSidebar {
-    flex: 1;
-}
-
-.contentHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.backLink {
-    text-decoration: none;
-    color: #007bff;
-    font-weight: 500;
-}
-.backLink:hover {
+.clickableCell:hover {
+    color: #a12c62; /* Darker theme color */
     text-decoration: underline;
 }
 
-.detailCard {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 1.5rem;
-}
-
-.statusCard {
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+/* --- Action Button (e.g., "Details") --- */
+/* 🎨 Theme Change: Changed button color from blue to theme color */
+.actionButton {
+    background-color: var(--color-primary); /* Use primary theme color */
     color: white;
-}
-
-.statusText p {
-    margin: 0;
-    font-size: 1rem;
-    opacity: 0.9;
-}
-.statusText h2 {
-    margin: 0;
-    font-size: 2rem;
-}
-
-.infoList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.infoList li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.infoList li:last-child {
-    border-bottom: none;
-}
-.infoList label {
-    color: #666;
-}
-
-.historyList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.historyList li {
-    position: relative;
-    padding-left: 1.5rem;
-    padding-bottom: 1rem;
-    border-left: 2px solid #e9ecef;
-}
-.historyList li:last-child {
-    border-left: 2px solid transparent;
-}
-.historyList li::before {
-    content: '';
-    position: absolute;
-    left: -6px;
-    top: 5px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: #007bff;
-}
-
-.logAction {
-    font-weight: bold;
-}
-.logActor, .logDate {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-.logComment {
-    font-size: 0.9rem;
-    background-color: #f8f9fa;
-    padding: 0.5rem;
-    border-radius: 4px;
-    margin-top: 0.5rem;
-}
-
-.commentBox {
-    background-color: #f8f9fa;
-    padding: 1rem;
+    padding: 8px 15px;
+    border: none;
     border-radius: 5px;
-    min-height: 50px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
+.actionButton:hover {
+    background-color: #a12c62; /* Darker theme color */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(232, 62, 140, 0.2);
+}
 
-/* --- Status Colors --- */
-.approved { background-color: #28a745; border-left: 5px solid #218838; }
-.rejected { background-color: #dc3545; border-left: 5px solid #c82333; }
-.pending { background-color: #ffc107; color: #333; border-left: 5px solid #e0a800; }
-.pending h2 { color: #333; }
+/* --- No Data Row --- */
+.noDataRow {
+    text-align: center !important;
+    color: #888;
+    padding: 2rem !important;
+    font-style: italic;
+}

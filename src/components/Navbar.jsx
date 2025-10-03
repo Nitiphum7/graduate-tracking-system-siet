@@ -64,6 +64,12 @@ function Navbar() {
                 return (
                      <ul className={styles.navLinks}>
                          <li><NavLink to={`/${user.role_name}/home`} className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
+                        {user.role_name === 'advisor' && (
+                            <li><NavLink to="/advisor/my-roles" className={({ isActive }) => isActive ? styles.active : ''}>
+                                    <FontAwesomeIcon icon={faUsersCog} /> บทบาทของฉัน
+                                </NavLink>
+                            </li>
+                        )}
                      </ul>
                 );
         }
@@ -84,7 +90,7 @@ function Navbar() {
             <div className={styles.userMenu}>
                 {loading ? (
                     <span>Loading...</span>
-                ) : user ? (
+                ) : user && user.email ? (
                     <>
                         <a href="#" onClick={(e) => e.preventDefault()} className={styles.userProfileLink}>
                             <div className={styles.userNameContainer}>

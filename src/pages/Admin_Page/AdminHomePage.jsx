@@ -1,15 +1,27 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // <--- แก้ไขบรรทัดนี้
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import styles from './AdminHomePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import PaginationControls from '../../components/admin/PaginationControls';
+import PaginationControls from '../../components/admin/PaginationControls'; // ตรวจสอบ Path ให้ถูกต้อง
 import { faInbox, faUserTie, faUserSecret, faUserShield, faFolderOpen, faFileCircleCheck, faFileCircleXmark, faHourglassHalf } from '@fortawesome/free-solid-svg-icons';
 
-// --- Component ตารางที่สามารถใช้ซ้ำได้ (โค้ดเดิม) ---
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn("Authentication token not found.");
+        return {};
+    }
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+// --- Component ตารางที่สามารถใช้ซ้ำได้ ---
 const DocumentTable = ({ documents, headers, navigate }) => {
     const [filterBy, setFilterBy] = useState(headers.find(h => h.filterable)?.key || 'title');
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortConfig, setSortConfig] = useState({ key: 'submitted_date', order: 'desc' });
+    const [sortConfig, setSortConfig] = useState({ key: 'submission_date', order: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
     const docsPerPage = 10;
 
@@ -17,10 +29,15 @@ const DocumentTable = ({ documents, headers, navigate }) => {
         if (!searchTerm) return documents;
         const lowercasedSearchTerm = searchTerm.toLowerCase();
         return documents.filter(doc => {
-            const value = doc[filterBy] ? String(doc[filterBy]).toLowerCase() : '';
-            return value.includes(lowercasedSearchTerm);
+            const value = doc[filterBy];
+            if (headers.find(h => h.key === filterBy)?.isDate) {
+                const formattedDate = new Date(value || 0).toLocaleDateString('th-TH');
+                return formattedDate.includes(lowercasedSearchTerm);
+            }
+            const valueToFilter = value ? String(value).toLowerCase() : '';
+            return valueToFilter.includes(lowercasedSearchTerm);
         });
-    }, [documents, searchTerm, filterBy]);
+    }, [documents, searchTerm, filterBy, headers]);
 
     const sortedDocs = useMemo(() => {
         let sortableDocs = [...filteredDocs];
@@ -63,7 +80,7 @@ const DocumentTable = ({ documents, headers, navigate }) => {
                 <table>
                     <thead>
                         <tr>
-                            {headers.map(h => (<th key={h.key} onClick={() => h.sortable && requestSort(h.key)} className={h.sortable ? styles.sortableHeader : ''}>{h.label}</th>))}
+                            {headers.map(h => (<th key={h.key} onClick={() => h.sortable && requestSort(h.key)}>{h.label}</th>))}
                         </tr>
                     </thead>
                     <tbody>
@@ -88,159 +105,188 @@ const DocumentTable = ({ documents, headers, navigate }) => {
     );
 };
 
-// --- Headers Config (โค้ดเดิม) ---
-const pendingReviewHeaders = [
-    { key: 'title', label: 'ชื่อเอกสาร', sortable: true, filterable: true },
-    { key: 'studentName', label: 'ชื่อ-นามสกุล', sortable: true, filterable: true },
-    { key: 'submitted_date', label: 'วันที่ส่ง', sortable: true, isDate: true },
-    { key: 'status', label: 'สถานะ', sortable: true, isStatus: true },
-];
-
 const allDocumentsHeaders = [
     { key: 'title', label: 'ชื่อเอกสาร', sortable: true, filterable: true },
     { key: 'studentName', label: 'ชื่อ-นามสกุล', sortable: true, filterable: true },
-    { key: 'submitted_date', label: 'วันที่ส่ง', sortable: true, isDate: true },
+    { key: 'student_id', label: 'รหัสนักศึกษา', sortable: true, filterable: true },
+    { key: 'submission_date', label: 'วันที่ส่ง', sortable: true, isDate: true, filterable: true },
     { key: 'status', label: 'สถานะปัจจุบัน', sortable: true, isStatus: true, filterable: true },
 ];
 
-// --- Section Components (โค้ดเดิม) ---
+const pendingHeaders = [
+    { key: 'title', label: 'ชื่อเอกสาร', sortable: true, filterable: true },
+    { key: 'studentName', label: 'ชื่อ-นามสกุล', sortable: true, filterable: true },
+    { key: 'student_id', label: 'รหัสนักศึกษา', sortable: true, filterable: true },
+    { key: 'submission_date', label: 'วันที่ส่ง', sortable: true, isDate: true, filterable: true },
+    { key: 'status', label: 'สถานะ', sortable: true, isStatus: true, filterable: true },
+];
+
+const executivePendingHeaders = [
+    { key: 'title', label: 'ชื่อเอกสาร', sortable: true, filterable: true },
+    { key: 'studentName', label: 'ชื่อ-นามสกุล', sortable: true, filterable: true },
+    { key: 'student_id', label: 'รหัสนักศึกษา', sortable: true, filterable: true },
+    { key: 'submission_date', label: 'วันที่ส่ง', sortable: true, isDate: true, filterable: true },
+    { key: 'status', label: 'สถานะ', sortable: true, isStatus: true, filterable: true },
+];
+
+const PendingAdvisorSection = ({ documents, stats, navigate }) => (
+    <section className={styles.contentSection}>
+        <h1><FontAwesomeIcon icon={faUserTie} /> เอกสารรออาจารย์ที่ปรึกษาอนุมัติ</h1>
+        <p className={styles.pageDescription}>รายการเอกสารทั้งหมดที่อยู่ในขั้นตอนรออาจารย์ที่ปรึกษาดำเนินการ</p>
+        <div className={styles.statsContainer}>
+            {/*  ใช้ documents.length ที่ถูกกรองมาแล้วแทน stats.pendingAdvisor */}
+            <div className={styles.statCard}><p className={styles.statTitle}>รอ อ.ที่ปรึกษา</p><h2 className={styles.statValue}>{documents.length}</h2></div> 
+            <div className={styles.statCard}><p className={styles.statTitle}>เอกสารในระบบทั้งหมด</p><h2 className={styles.statValue}>{stats.totalDocs}</h2></div>
+        </div>
+        <DocumentTable documents={documents} headers={pendingHeaders} navigate={navigate} />
+    </section>
+);
+
+const PendingExternalAdvisorSection = ({ documents, stats, navigate }) => (
+    <section className={styles.contentSection}>
+        <h1><FontAwesomeIcon icon={faUserSecret} /> เอกสารรออาจารย์ภายนอกอนุมัติ</h1>
+        <p className={styles.pageDescription}>รายการเอกสารทั้งหมดที่อยู่ในขั้นตอนรออาจารย์ภายนอกดำเนินการ</p>
+        <div className={styles.statsContainer}>
+            {/* ใช้ documents.length ที่ถูกกรองมาแล้ว */}
+            <div className={styles.statCard}><p className={styles.statTitle}>รอ อ.ภายนอก</p><h2 className={styles.statValue}>{documents.length}</h2></div> 
+            <div className={styles.statCard}><p className={styles.statTitle}>เอกสารในระบบทั้งหมด</p><h2 className={styles.statValue}>{stats.totalDocs}</h2></div>
+        </div>
+        <DocumentTable documents={documents} headers={pendingHeaders} navigate={navigate} />
+    </section>
+);
+
+const PendingExecutiveSection = ({ documents, stats, navigate }) => (
+    <section className={styles.contentSection}>
+        <h1><FontAwesomeIcon icon={faUserShield} /> เอกสารรอผู้บริหารอนุมัติ</h1>
+        <p className={styles.pageDescription}>รายการเอกสารทั้งหมดที่อยู่ในขั้นตอนรอผู้บริหารดำเนินการ</p>
+        <div className={styles.statsContainer}>
+            <div className={styles.statCard}><p className={styles.statTitle}>รอผู้บริหาร</p><h2 className={styles.statValue}>{documents.length}</h2></div> 
+            <div className={styles.statCard}><p className={styles.statTitle}>เอกสารในระบบทั้งหมด</p><h2 className={styles.statValue}>{stats.totalDocs}</h2></div>
+        </div>
+        <DocumentTable documents={documents} headers={executivePendingHeaders} navigate={navigate} /> {/* ใช้ executivePendingHeaders หรือ pendingHeaders */}
+    </section>
+);
+
+// --- Section Components ---
 const PendingReviewSection = ({ documents, stats, navigate }) => (
     <section className={styles.contentSection}>
         <h1><FontAwesomeIcon icon={faInbox} /> เอกสารรอตรวจ</h1>
         <p className={styles.pageDescription}>เอกสารที่ยื่นโดยนักศึกษาและรอการตรวจสอบจากเจ้าหน้าที่เป็นขั้นตอนแรก</p>
         <div className={styles.statsContainer}>
-            <div className={styles.statCard}><p>รอเจ้าหน้าที่ตรวจ</p><h2>{stats.pendingAdmin || 0}</h2></div>
-            <div className={styles.statCard}><p>เอกสารในระบบทั้งหมด</p><h2>{stats.totalDocs || 0}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}>รอเจ้าหน้าที่ตรวจ</p><h2 className={styles.statValue}>{stats.pendingAdmin}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}>เอกสารในระบบทั้งหมด</p><h2 className={styles.statValue}>{stats.totalDocs}</h2></div>
         </div>
-        <DocumentTable documents={documents} headers={pendingReviewHeaders} navigate={navigate} />
+        <DocumentTable documents={documents} headers={pendingHeaders} navigate={navigate} />
     </section>
 );
-
-const PendingAdvisorSection = ({ documents, stats, navigate }) => (
-    <section className={styles.contentSection}>
-        <h1><FontAwesomeIcon icon={faUserTie} /> อาจารย์ที่ปรึกษาอนุมัติ</h1>
-        <p>เอกสารที่ถูกส่งต่อไปยังอาจารย์ที่ปรึกษาเพื่อรอการอนุมัติ</p>
-        <div className={styles.statsContainer}>
-            <div className={styles.statCard}><p>กำลังรออนุมัติ</p><h2>{stats.pendingAdvisor || 0}</h2></div>
-        </div>
-        <DocumentTable documents={documents} headers={pendingReviewHeaders} navigate={navigate} />
-    </section>
-);
-
 const AllDocumentsSection = ({ documents, stats, navigate }) => (
     <section className={styles.contentSection}>
         <h1><FontAwesomeIcon icon={faFolderOpen} /> เอกสารทั้งหมด</h1>
         <p className={styles.pageDescription}>ภาพรวมและรายการเอกสารทั้งหมดในระบบ</p>
         <div className={styles.statsContainer}>
-            <div className={styles.statCard}><p><FontAwesomeIcon icon={faHourglassHalf} /> กำลังดำเนินการ</p><h2>{stats.inProgress || 0}</h2></div>
-            <div className={styles.statCard}><p><FontAwesomeIcon icon={faFileCircleCheck} /> อนุมัติแล้ว</p><h2>{stats.approved || 0}</h2></div>
-            <div className={styles.statCard}><p><FontAwesomeIcon icon={faFileCircleXmark} /> ส่งกลับ/ปฏิเสธ</p><h2>{stats.rejected || 0}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}><FontAwesomeIcon icon={faFolderOpen} /> ทั้งหมด</p><h2 className={styles.statValue}>{stats.totalDocs}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}><FontAwesomeIcon icon={faHourglassHalf} /> กำลังดำเนินการ</p><h2 className={styles.statValue}>{stats.inProgress}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}><FontAwesomeIcon icon={faFileCircleCheck} /> อนุมัติแล้ว</p><h2 className={styles.statValue}>{stats.approved}</h2></div>
+            <div className={styles.statCard}><p className={styles.statTitle}><FontAwesomeIcon icon={faFileCircleXmark} /> ส่งกลับ/ปฏิเสธ</p><h2 className={styles.statValue}>{stats.rejected}</h2></div>
         </div>
         <DocumentTable documents={documents} headers={allDocumentsHeaders} navigate={navigate} />
     </section>
 );
-
 // --- Component หลัก ---
 function AdminHomePage() {
     const [stats, setStats] = useState({});
-    const [allDocs, setAllDocs] = useState([]);
+    const [allDocs, setAllDocs] = useState({ all: [], pendingReview: [], pendingAdvisor: [], pendingExternalAdvisor: [] , pendingExecutive: [],}); 
     const [loading, setLoading] = useState(true);
-    const { activeSection } = useOutletContext();
+    const { activeSection, setNotifications } = useOutletContext();
     const navigate = useNavigate();
 
-    // ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
-    // ✅         ส่วนที่แก้ไขทั้งหมดอยู่ตรงนี้        ✅
-    // ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
     useEffect(() => {
         const loadAdminData = async () => {
             setLoading(true);
             try {
-                // 1. ดึง Token ที่บันทึกไว้ตอน Login ออกมาจาก localStorage
-                const token = localStorage.getItem('token');
-
-                // 1.1 (สำคัญ) ถ้าไม่มี Token เลย ให้ส่งไปหน้า Login
-                if (!token) {
-                    navigate('/login'); // หรือ path ไปยังหน้า login ของคุณ
-                    return;
-                }
-
-                // 2. เพิ่ม Authorization header เข้าไปใน Options ของ fetch
-                const response = await fetch('http://localhost:3000/api/admin/all-data', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // <--- จุดที่สำคัญที่สุด
-                    }
-                });
-
-                // 3. จัดการกับกรณีที่ Token หมดอายุ หรือไม่ถูกต้อง (Server ตอบ 401 หรือ 403)
-                if (response.status === 401 || response.status === 403) {
-                    localStorage.removeItem('token'); // ลบ token ที่ใช้ไม่ได้แล้ว
-                    navigate('/login'); // ส่งกลับไปหน้า login
-                    throw new Error('Token ไม่ถูกต้องหรือหมดอายุ');
-                }
-
-                if (!response.ok) {
-                    throw new Error('ไม่สามารถดึงข้อมูลได้');
-                }
-
+                const response = await fetch('http://localhost:3000/api/admin/all-data', { headers: getAuthHeaders() });
+                if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลจาก Server ได้');
+                
                 const data = await response.json();
-                setStats(data.stats || {});
-                setAllDocs(data.documents || []);
+                
+                setStats(data.stats);
+
+                const allDocumentsFromServer = data.documents;
+
+                const adminReviewStatuses = [
+                    'รอตรวจสอบ',            
+                    'รอเจ้าหน้าที่ตรวจสอบ',    
+                    'รอเจ้าหน้าที่ยืนยัน',      
+                ];
+
+                const pendingReview = allDocumentsFromServer.filter(doc => adminReviewStatuses.includes(doc.status));
+
+                const advisorStatuses = [
+                    'รออาจารย์ที่ปรึกษาอนุมัติ',
+                    'รออาจารย์ที่ปรึกษาหลักอนุมัติ',
+                    'รออาจารย์ที่ปรึกษา (3 ท่าน) อนุมัติ',
+                ];
+                
+                const pendingAdvisor = allDocumentsFromServer.filter(doc => 
+                    advisorStatuses.includes(doc.status));
+
+                const externalAdvisorStatuses = [
+                    'รออาจารย์ภายนอกอนุมัติ',      // Status ID 7
+                    'รออาจารย์สำรองภายนอกอนุมัติ', // Status ID 15
+                    // หาก 'รออาจารย์สำรองภายในอนุมัติ' (ID 14) ถูกนับรวมด้วย ให้เพิ่มเข้าไปที่นี่
+                ];
+                const pendingExternalAdvisor = allDocumentsFromServer.filter(doc => 
+                    externalAdvisorStatuses.includes(doc.status)
+                );
+
+                const executiveStatuses = [
+                    'รออธิการบดีอนุมัติ',     // Status ID 10
+                    // เพิ่มสถานะอื่นๆ ที่เกี่ยวข้องกับผู้บริหาร เช่น รอรองอธิการบดี ฯลฯ
+                ];
+                const pendingExecutive = allDocumentsFromServer.filter(doc => 
+                    executiveStatuses.includes(doc.status)
+                );
+
+
+                setAllDocs({
+                    all: allDocumentsFromServer,
+                    pendingReview: pendingReview,
+                    pendingAdvisor: pendingAdvisor,
+                    pendingExternalAdvisor: pendingExternalAdvisor,
+                    pendingExecutive: pendingExecutive,
+                    // สามารถเพิ่มการกรองสำหรับ section อื่นๆ ที่นี่
+                });
+                
+                if (setNotifications) setNotifications({});
 
             } catch (error) {
                 console.error("Failed to load admin data:", error);
-                // อาจจะตั้งค่า state เพื่อแสดงข้อความ error บน UI
             } finally {
                 setLoading(false);
             }
         };
         loadAdminData();
-    }, [navigate]); // เพิ่ม navigate เข้าไปใน dependency array ของ useEffect
-    // ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
-    // ✅             จบส่วนที่แก้ไข             ✅
-    // ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
-
-    const documentsForSection = useMemo(() => {
-        if (!activeSection) return allDocs.filter(doc => doc.status === 'รอตรวจสอบ'); // Default
-        switch (activeSection) {
-            case 'pending-review':
-                return allDocs.filter(doc => doc.status === 'รอตรวจสอบ');
-            case 'pending-advisor':
-                return allDocs.filter(doc => doc.status === 'รออาจารย์ที่ปรึกษาอนุมัติ');
-            case 'pending-external':
-                return allDocs.filter(doc => doc.status === 'รออาจารย์บัณฑิตพิเศษอนุมัติ');
-            case 'pending-executive':
-                return allDocs.filter(doc => doc.status === 'รอประธานหลักสูตรอนุมัติ');
-            case 'all-documents':
-                return allDocs;
-            default:
-                return allDocs.filter(doc => doc.status === 'รอตรวจสอบ');
-        }
-    }, [allDocs, activeSection]);
+    }, [activeSection, setNotifications]);
 
     const renderSection = () => {
-        const sectionProps = { stats, navigate, documents: documentsForSection };
-
         switch (activeSection) {
             case 'pending-review':
-                return <PendingReviewSection {...sectionProps} />;
-            case 'pending-advisor':
-                return <PendingAdvisorSection {...sectionProps} />;
-            case 'pending-external':
-                // คุณต้องสร้าง Component นี้ตามตัวอย่างด้านบน
-                return <div>หน้าสำหรับอาจารย์ภายนอก (ยังไม่ได้สร้าง Component)</div>; // ตัวอย่างชั่วคราว
-            case 'pending-executive':
-                // คุณต้องสร้าง Component นี้ตามตัวอย่างด้านบน
-                return <div>หน้าสำหรับผู้บริหาร (ยังไม่ได้สร้าง Component)</div>; // ตัวอย่างชั่วคราว
+                return <PendingReviewSection documents={allDocs.pendingReview} stats={stats} navigate={navigate} />;
+            case 'pending-advisor': 
+                return <PendingAdvisorSection documents={allDocs.pendingAdvisor} stats={stats} navigate={navigate} />;
+            case 'pending-external-advisor': 
+                return <PendingExternalAdvisorSection documents={allDocs.pendingExternalAdvisor} stats={stats} navigate={navigate} />;
+            case 'pending-executive': 
+                return <PendingExecutiveSection documents={allDocs.pendingExecutive} stats={stats} navigate={navigate} />;
             case 'all-documents':
-                return <AllDocumentsSection {...sectionProps} />;
+                return <AllDocumentsSection documents={allDocs.all} stats={stats} navigate={navigate} />;
+            // เพิ่ม case อื่นๆ ตาม sidebar ของคุณ
             default:
-                return <PendingReviewSection {...sectionProps} />;
+                return <AllDocumentsSection documents={allDocs.all} stats={stats} navigate={navigate} />;
         }
     };
 
-    if (loading) return <div style={{ padding: '2rem' }}>กำลังโหลดข้อมูล...</div>;
+    if (loading) return <div>กำลังโหลดข้อมูล...</div>;
 
     return (
         <div className={styles.pageContainer}>

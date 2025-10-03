@@ -1,5 +1,4 @@
 // src/components/admin/StudentTable.jsx
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../pages/Admin_Page/ManageUsersPage.module.css';
@@ -13,7 +12,6 @@ function StudentTable({ students, advisors, onDelete }) {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    // รีเซ็ตหน้าเมื่อข้อมูลนักศึกษาเปลี่ยน
     useEffect(() => {
         setCurrentPage(1);
     }, [students]);
@@ -51,11 +49,9 @@ function StudentTable({ students, advisors, onDelete }) {
         if (sortConfig?.key !== key) return faSort;
         return sortConfig.direction === 'ascending' ? faSortUp : faSortDown;
     };
-    
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentTableData = sortedStudents.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(students.length / itemsPerPage);
+
+    const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
+    const currentTableData = sortedStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <>
@@ -63,19 +59,12 @@ function StudentTable({ students, advisors, onDelete }) {
                 <table>
                     <thead>
                         <tr>
-                            {/* ✅ เพิ่ม className เพื่อให้ CSS ทำงาน */}
-                            <th onClick={() => requestSort('student_id')} className={sortConfig.key === 'student_id' ? styles.active : ''}>
-                                รหัสนักศึกษา <FontAwesomeIcon icon={getSortIcon('student_id')} />
-                            </th>
-                            <th onClick={() => requestSort('first_name_th')} className={sortConfig.key === 'first_name_th' ? styles.active : ''}>
-                                ชื่อ-นามสกุล <FontAwesomeIcon icon={getSortIcon('first_name_th')} />
-                            </th>
-                            <th onClick={() => requestSort('email')} className={sortConfig.key === 'email' ? styles.active : ''}>
-                                อีเมล <FontAwesomeIcon icon={getSortIcon('email')} />
-                            </th>
+                            <th onClick={() => requestSort('student_id')} className={sortConfig.key === 'student_id' ? styles.active : ''}>รหัสนักศึกษา <FontAwesomeIcon icon={getSortIcon('student_id')} /></th>
+                            <th onClick={() => requestSort('first_name_th')} className={sortConfig.key === 'first_name_th' ? styles.active : ''}>ชื่อ-นามสกุล <FontAwesomeIcon icon={getSortIcon('first_name_th')} /></th>
+                            <th onClick={() => requestSort('email')} className={sortConfig.key === 'email' ? styles.active : ''}>อีเมล <FontAwesomeIcon icon={getSortIcon('email')} /></th>
                             <th>เบอร์โทรศัพท์</th>
                             <th>ที่ปรึกษาหลัก</th>
-                            <th style={{textAlign: 'center'}}>ดำเนินการ</th>
+                            <th style={{ textAlign: 'center' }}>ดำเนินการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -93,14 +82,7 @@ function StudentTable({ students, advisors, onDelete }) {
                                         <button className={styles.actionBtn} title="แก้ไข" onClick={(e) => { e.stopPropagation(); navigate(`/admin/manage-users/student/${student.student_id}`) }}>
                                             <FontAwesomeIcon icon={faPencilAlt} />
                                         </button>
-                                        <button 
-                                            className={styles.actionBtn} 
-                                            title="ลบ" 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); // หยุดไม่ให้ event click ลามไปถึง tr
-                                                onDelete(student.student_id); 
-                                            }}
-                                        >
+                                        <button className={styles.actionBtn} title="ลบ" onClick={(e) => { e.stopPropagation(); onDelete(student.student_id); }}>
                                             <FontAwesomeIcon icon={faTrashAlt} />
                                         </button>
                                     </td>
@@ -110,15 +92,11 @@ function StudentTable({ students, advisors, onDelete }) {
                     </tbody>
                 </table>
             </div>
-            {totalPages > 1 &&
-                <div className={styles.pagination}>
-                    <PaginationControls 
-                        currentPage={currentPage} 
-                        totalPages={totalPages}
-                        onPageChange={page => setCurrentPage(page)}
-                    />
+            {totalPages > 1 && (
+                 <div className={styles.pagination}>
+                    <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
-            }
+            )}
         </>
     );
 }

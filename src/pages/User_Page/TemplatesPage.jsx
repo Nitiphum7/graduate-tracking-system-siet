@@ -12,8 +12,8 @@ function formatThaiDate(dateString) {
 }
 
 function TemplatesPage() {
-    const { user, loading: authLoading } = useAuth();
-    const navigate = useNavigate();
+    const { user, token, loading: authLoading } = useAuth(); 
+    const navigate = useNavigate();
     const API_URL = 'http://localhost:3000';
 
     const [templates, setTemplates] = useState([]);
@@ -29,12 +29,26 @@ function TemplatesPage() {
         }
 
         const loadTemplateData = async () => {
-            try {
-                // เรียก API 2 ตัวพร้อมกัน
-                const [templatesResponse, completedDocsResponse] = await Promise.all([
-                    fetch(`${API_URL}/api/templates`),
-                    fetch(`${API_URL}/api/completed-documents/${user.id}`)
-                ]);
+            // 1. ดึง Token จาก user object
+            const currentToken = token; // *** สมมติว่า Token ถูกเก็บใน user.token ***
+
+            // 2. สร้าง options สำหรับการ fetch พร้อมใส่ Authorization Header
+            const fetchOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    // ใส่ Token เข้าไปใน Header
+                    'Authorization': `Bearer ${currentToken}` 
+                }
+            };
+
+            try {
+                // เรียก API 2 ตัวพร้อมกัน พร้อมส่ง fetchOptions ไปด้วย
+                const [templatesResponse, completedDocsResponse] = await Promise.all([
+                    // ส่ง fetchOptions สำหรับ API ตัวที่ 1
+                    fetch(`${API_URL}/api/templates`, fetchOptions),
+                    // ส่ง fetchOptions สำหรับ API ตัวที่ 2
+                    fetch(`${API_URL}/api/completed-documents/${user.id}`, fetchOptions)
+                ]);
 
                 if (!templatesResponse.ok || !completedDocsResponse.ok) {
                     throw new Error('ไม่สามารถโหลดข้อมูลได้');

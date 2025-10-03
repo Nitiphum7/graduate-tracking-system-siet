@@ -1,12 +1,12 @@
-import React, { useState } from 'react'; // ไม่ต้องใช้ useEffect ที่นี่แล้ว เพราะ useAuth จัดการให้
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import styles from './NavbarAdmin.module.css';
 import logo from '../../assets/images/logo.png';
-import { useAuth } from '../../hooks/useAuth'; // ✅ Import useAuth จาก hooks/useAuth
+import { useAuth } from '../../hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faUsersCog, faSitemap, faCog, faUserCircle, faCaretDown, faUserEdit, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
-
+// Modal สำหรับยืนยันการออกจากระบบ
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -28,15 +28,13 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-
+// Navbar Component
 function NavbarAdmin() {
-  const navigate = useNavigate();
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
-  // ✅ ดึง user (ไม่ใช่ userData) และ logout จาก useAuth ของคุณ
-  // useAuth ของคุณจะคืนค่า { user, token, loading, login, logout, verifyUser }
-  const { user, loading, logout } = useAuth(); // ดึง loading มาใช้แสดง 'กำลังโหลด...'
+  
+  // ✅ ดึง user, loading, และ logout จาก useAuth
+  const { user, loading, logout } = useAuth();
 
   const handleLogoutClick = (e) => {
     e.preventDefault();
@@ -47,19 +45,18 @@ function NavbarAdmin() {
   const confirmLogout = () => {
     logout(); // ✅ เรียกฟังก์ชัน logout จาก useAuth
     setIsLogoutModalOpen(false); 
-    // useAuth.logout() ควรจะจัดการการล้าง localStorage และ navigate ไปหน้า Login ให้เอง
+    // useAuth.logout() จะจัดการการล้าง localStorage และ navigate ไปหน้า Login เอง
   };
 
-  // ✅ กำหนดค่าแสดงผลตาม user ที่ได้จาก useAuth และสถานะ loading
+  // ✅ แสดงข้อความ "กำลังโหลด..." ระหว่างรอข้อมูล
   let adminName = 'กำลังโหลด...';
   let adminEmail = 'กำลังโหลด...';
 
-  if (!loading) { // แสดงข้อมูลเมื่อโหลดเสร็จแล้วเท่านั้น
+  if (!loading) { 
     if (user) {
-      // สมมติว่า user object ของคุณมี first_name_th และ last_name_th (หรือชื่ออื่น ๆ)
-      // ปรับตามโครงสร้างของ user object ที่มาจาก Backend ของคุณ
+      // ปรับตามโครงสร้าง user object ที่ได้จาก Backend
       adminName = `${user.first_name_th || ''} ${user.last_name_th || ''}`.trim();
-      if (!adminName) { // ถ้าชื่อ-นามสกุลว่าง ให้ใช้ 'ผู้ดูแลระบบ'
+      if (!adminName) {
         adminName = 'ผู้ดูแลระบบ';
       }
       adminEmail = user.email || '';
@@ -68,7 +65,6 @@ function NavbarAdmin() {
       adminEmail = '';
     }
   }
-
 
   return (
     <>
@@ -116,4 +112,6 @@ function NavbarAdmin() {
     </>
   );
 }
+
 export default NavbarAdmin;
+

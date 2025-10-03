@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import styles from './Form2Page.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
+// 💡 แก้ไข: Import API Call Functions แทน API_URL, getAuthHeaders
+import { getForm2Data, submitForm2 } from '../../utils/api'; 
 
 const fileToDataUrl = (file) => {
   return new Promise((resolve, reject) => {
@@ -17,7 +19,6 @@ const fileToDataUrl = (file) => {
 function Form2Page() {
   const navigate = useNavigate();
   const { user: currentUser, loading: authLoading } = useAuth();
-  const API_URL = 'http://localhost:3000';
 
   const [studentInfo, setStudentInfo] = useState(null);
   const [advisorLists, setAdvisorLists] = useState({
@@ -45,18 +46,17 @@ function Form2Page() {
 
     const loadPageData = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/forms/form2-data/${currentUser.id}`);
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.message || "ไม่สามารถดึงข้อมูลสำหรับฟอร์ม 2 ได้");
-        }
-        
-        const data = await response.json();
+        // 💡 แก้ไข: ใช้ getForm2Data จาก api.js (ซึ่งใช้ Axios)
+        const response = await getForm2Data(currentUser.id);
+        const data = response.data; // Axios จะส่งข้อมูลอยู่ใน field .data
+
         setStudentInfo(data.studentInfo);
         setAdvisorLists(data.advisorLists);
 
       } catch (err) {
-        setError(err.message);
+        // Axios Error จะอยู่ที่ err.response.data.message
+        const errorMessage = err.response?.data?.message || err.message || "ไม่สามารถดึงข้อมูลสำหรับฟอร์ม 2 ได้";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -83,24 +83,26 @@ function Form2Page() {
   
   const handleRemoveFile = (fileName) => {
       setFormData(prev => ({
-          ...prev,
-          files: { ...prev.files, [fileName]: null }
+        ...prev,
+        files: { ...prev.files, [fileName]: null }
       }));
   };
 
   const handleSubmit = async (e) => {
-     e.preventDefault();
+      e.preventDefault();
 
-     if (Object.values(formData.files).some(file => file === null)) {
-         alert("กรุณาแนบไฟล์ประกอบให้ครบถ้วนทุกช่อง");
-         return;
-     }
+      if (Object.values(formData.files).some(file => file === null)) {
+        alert("กรุณาแนบไฟล์ประกอบให้ครบถ้วนทุกช่อง");
+        return;
+      }
 
-     try {
+      try {
         setLoading(true);
+        // 1. แปลงไฟล์เป็น Data URL
         const filePromises = Object.values(formData.files).map(file => fileToDataUrl(file));
         const fileUrls = await Promise.all(filePromises);
 
+        // 2. สร้างโครงสร้างข้อมูล submissionData (เหมือนเดิม)
         const submissionData = {
           student_user_id: currentUser.id,
           thesis_title_th: formData.thesisTitleTh,
@@ -112,6 +114,7 @@ function Form2Page() {
             reserve_external_id: formData.reserveExternal,
             reserve_internal_id: formData.reserveInternal,
           },
+          // 💡 ตรวจสอบลำดับการ Map URL/File Name ให้ตรงกับ Promise.all
           files: [
             { type: 'ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์ (ไทย)', name: formData.files.proposalFile_th.name, url: fileUrls[0] },
             { type: 'ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์ (อังกฤษ)', name: formData.files.proposalFile_en.name, url: fileUrls[1] },
@@ -126,26 +129,20 @@ function Form2Page() {
           student_comment: formData.comment,
         };
         
-        const response = await fetch(`${API_URL}/api/submissions/form2`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submissionData),
-        });
+        // 💡 แก้ไข: ใช้ submitForm2 จาก api.js
+        await submitForm2(submissionData);
         
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.message || "เกิดข้อผิดพลาดในการส่งฟอร์ม");
-        }
-
         alert("✅ ยืนยันและส่งแบบฟอร์มเสนอหัวข้อเรียบร้อยแล้ว!");
         navigate("/student/status");
 
-     } catch (error) {
+      } catch (error) {
         console.error("Form 2 submission error:", error);
-        alert(`เกิดข้อผิดพลาด: ${error.message}`);
-     } finally {
+        // ดึง Error message จาก Axios response
+        const errorMessage = error.response?.data?.message || error.message || "เกิดข้อผิดพลาดในการส่งฟอร์ม";
+        alert(`เกิดข้อผิดพลาด: ${errorMessage}`);
+      } finally {
         setLoading(false);
-     }
+      }
   };
 
   if (loading || authLoading) return <div className={styles.loading}>กำลังโหลดข้อมูล...</div>;
@@ -155,212 +152,213 @@ function Form2Page() {
   const yearOptions = Array.from({ length: 20 }, (_, i) => currentThaiYear - i);
 
   return (
+    // ... (โค้ดส่วน UI ที่เหลือ)
     <div className={styles.formContainer}>
-      <h2>📑 แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์ ระดับบัณฑิตศึกษา</h2>
-      <form onSubmit={handleSubmit}>
-        <fieldset>
-          <legend>📌 ข้อมูลนักศึกษา</legend>
-          <div className={`${styles.infoGrid} ${styles.threeCols}`}>
-            <div><label>ชื่อ-นามสกุล:</label><input type="text" value={studentInfo?.fullname || ''} disabled /></div>
-            <div><label>รหัสนักศึกษา:</label><input type="text" value={studentInfo?.student_id || ''} disabled /></div>
-            <div><label>ระดับปริญญา:</label><input type="text" value={studentInfo?.degree || ''} disabled /></div>
-          </div>
-          <div className={styles.infoGrid}>
-            <div><label>หลักสูตรและสาขาวิชา:</label><input type="text" value={studentInfo?.program_name || ''} disabled /></div>
-            <div><label>ภาควิชา:</label><input type="text" value={studentInfo?.department_name || ''} disabled /></div>
-          </div>
-        </fieldset>
-        
-        <fieldset>
-          <legend>📖 หัวข้อวิทยานิพนธ์</legend>
-          <div className={styles.formGroup}>
-            <label htmlFor="thesisTitleTh">ชื่อเรื่อง (ภาษาไทย)*</label>
-            <textarea id="thesisTitleTh" name="thesisTitleTh" value={formData.thesisTitleTh} onChange={handleChange} rows="3" placeholder="กรอกชื่อเรื่องวิทยานิพนธ์ภาษาไทย..." required />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="thesisTitleEn">ชื่อเรื่อง (ภาษาอังกฤษ)*</label>
-            <textarea id="thesisTitleEn" name="thesisTitleEn" value={formData.thesisTitleEn} onChange={handleChange} rows="3" placeholder="กรอกชื่อเรื่องวิทยานิพนธ์ภาษาอังกฤษ..." required />
-          </div>
-        </fieldset>
+      <h2>📑 แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์ ระดับบัณฑิตศึกษา</h2>
+      <form onSubmit={handleSubmit}>
+        <fieldset>
+          <legend>📌 ข้อมูลนักศึกษา</legend>
+          <div className={`${styles.infoGrid} ${styles.threeCols}`}>
+            <div><label>ชื่อ-นามสกุล:</label><input type="text" value={studentInfo?.fullname || ''} disabled /></div>
+            <div><label>รหัสนักศึกษา:</label><input type="text" value={studentInfo?.student_id || ''} disabled /></div>
+            <div><label>ระดับปริญญา:</label><input type="text" value={studentInfo?.degree || ''} disabled /></div>
+          </div>
+          <div className={styles.infoGrid}>
+            <div><label>หลักสูตรและสาขาวิชา:</label><input type="text" value={studentInfo?.program_name || ''} disabled /></div>
+            <div><label>ภาควิชา:</label><input type="text" value={studentInfo?.department_name || ''} disabled /></div>
+          </div>
+        </fieldset>
+        
+        <fieldset>
+          <legend>📖 หัวข้อวิทยานิพนธ์</legend>
+          <div className={styles.formGroup}>
+            <label htmlFor="thesisTitleTh">ชื่อเรื่อง (ภาษาไทย)*</label>
+            <textarea id="thesisTitleTh" name="thesisTitleTh" value={formData.thesisTitleTh} onChange={handleChange} rows="3" placeholder="กรอกชื่อเรื่องวิทยานิพนธ์ภาษาไทย..." required />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="thesisTitleEn">ชื่อเรื่อง (ภาษาอังกฤษ)*</label>
+            <textarea id="thesisTitleEn" name="thesisTitleEn" value={formData.thesisTitleEn} onChange={handleChange} rows="3" placeholder="กรอกชื่อเรื่องวิทยานิพนธ์ภาษาอังกฤษ..." required />
+          </div>
+        </fieldset>
 
-        <fieldset>
-            <legend>👨‍🏫 อาจารย์ที่ปรึกษาและคณะกรรมการสอบ</legend>
-            <div className={styles.subSection}>
-              <label className={styles.subSectionLabel}>รายชื่ออาจารย์ที่ปรึกษา</label>
-              <div className={`${styles.infoGrid}`}>
-                <div><label>อาจารย์ที่ปรึกษาหลัก:</label><input type="text" value={advisorLists.mainAdvisorName} disabled /></div>
-                <div><label>อาจารย์ที่ปรึกษาร่วม 1:</label><input type="text" value={advisorLists.coAdvisor1Name} disabled /></div>
-              </div>
-            </div>
-            <div className={styles.subSection}>
-                <label className={styles.subSectionLabel}>เสนอชื่อคณะกรรมการสอบ*</label>
-                <div className={styles.formGroup}>
-                    <label htmlFor="committeeChair">ประธานกรรมการสอบ*</label>
-                    <select id="committeeChair" name="committeeChair" value={formData.committeeChair} onChange={handleChange} required>
-                        <option value="">-- เลือก --</option>
-                        {advisorLists.potentialChairs.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
-                    </select>
-                </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor="coAdvisor2">กรรมการ (ที่ปรึกษาร่วม 2)*</label>
-                    <select id="coAdvisor2" name="coAdvisor2" value={formData.coAdvisor2} onChange={handleChange} required>
-                        <option value="">-- เลือก --</option>
-                        {advisorLists.potentialCoAdvisors2.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
-                    </select>
-                </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor="committeeMember5">กรรมการสอบ (คนที่ 5)*</label>
-                    <select id="committeeMember5" name="committeeMember5" value={formData.committeeMember5} onChange={handleChange} required>
-                        <option value="">-- เลือก --</option>
-                        {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
-                    </select>
-                </div>
-            </div>
-            <div className={styles.subSection}>
-              <label className={styles.subSectionLabel}>เสนอชื่อกรรมการสำรอง*</label>
-              <div className={styles.infoGrid}>
-                <div className={styles.formGroup}>
-                  <label htmlFor="reserveExternal">กรรมการสำรอง (จากภายนอก)*</label>
-                  <select id="reserveExternal" name="reserveExternal" value={formData.reserveExternal} onChange={handleChange} required>
-                    <option value="">-- เลือก --</option>
-                    {advisorLists.externalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
-                  </select>
-                </div>
-                <div className={styles.formGroup}>
-                  <label htmlFor="reserveInternal">กรรมการสำรอง (จากภายใน)*</label>
-                  <select id="reserveInternal" name="reserveInternal" value={formData.reserveInternal} onChange={handleChange} required>
-                    <option value="">-- เลือก --</option>
-                    {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-        </fieldset>
+        <fieldset>
+            <legend>👨‍🏫 อาจารย์ที่ปรึกษาและคณะกรรมการสอบ</legend>
+            <div className={styles.subSection}>
+              <label className={styles.subSectionLabel}>รายชื่ออาจารย์ที่ปรึกษา</label>
+              <div className={`${styles.infoGrid}`}>
+                <div><label>อาจารย์ที่ปรึกษาหลัก:</label><input type="text" value={advisorLists.mainAdvisorName} disabled /></div>
+                <div><label>อาจารย์ที่ปรึกษาร่วม 1:</label><input type="text" value={advisorLists.coAdvisor1Name} disabled /></div>
+              </div>
+            </div>
+            <div className={styles.subSection}>
+                <label className={styles.subSectionLabel}>เสนอชื่อคณะกรรมการสอบ*</label>
+                <div className={styles.formGroup}>
+                    <label htmlFor="committeeChair">ประธานกรรมการสอบ*</label>
+                    <select id="committeeChair" name="committeeChair" value={formData.committeeChair} onChange={handleChange} required>
+                        <option value="">-- เลือก --</option>
+                        {advisorLists.potentialChairs.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
+                    </select>
+                </div>
+                <div className={styles.formGroup}>
+                    <label htmlFor="coAdvisor2">กรรมการ (ที่ปรึกษาร่วม 2)*</label>
+                    <select id="coAdvisor2" name="coAdvisor2" value={formData.coAdvisor2} onChange={handleChange} required>
+                        <option value="">-- เลือก --</option>
+                        {advisorLists.potentialCoAdvisors2.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
+                    </select>
+                </div>
+                <div className={styles.formGroup}>
+                    <label htmlFor="committeeMember5">กรรมการสอบ (คนที่ 5)*</label>
+                    <select id="committeeMember5" name="committeeMember5" value={formData.committeeMember5} onChange={handleChange} required>
+                        <option value="">-- เลือก --</option>
+                        {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className={styles.subSection}>
+              <label className={styles.subSectionLabel}>เสนอชื่อกรรมการสำรอง*</label>
+              <div className={styles.infoGrid}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="reserveExternal">กรรมการสำรอง (จากภายนอก)*</label>
+                  <select id="reserveExternal" name="reserveExternal" value={formData.reserveExternal} onChange={handleChange} required>
+                    <option value="">-- เลือก --</option>
+                    {advisorLists.externalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="reserveInternal">กรรมการสำรอง (จากภายใน)*</label>
+                  <select id="reserveInternal" name="reserveInternal" value={formData.reserveInternal} onChange={handleChange} required>
+                    <option value="">-- เลือก --</option>
+                    {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+        </fieldset>
 
-        {/* ✅✅✅ SECTION ที่ขาดหายไป ถูกเพิ่มกลับเข้ามาที่นี่ ✅✅✅ */}
-        <fieldset>
-          <legend>📎 แนบเอกสารประกอบ</legend>
+        {/* ✅✅✅ SECTION แนบเอกสารประกอบ (โค้ดเดิม) ✅✅✅ */}
+        <fieldset>
+          <legend>📎 แนบเอกสารประกอบ</legend>
 
-          <div className={`${styles.subSection} ${formData.files.proposalFile_th && formData.files.proposalFile_en ? styles.attached : ''}`}>
-            <label>1. ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์* (.pdf, .docx)</label>
-            <div className={styles.fileGroup}>
-                <div className={styles.fileInputSubgroup}>
-                    <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
-                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_TH_DD-MM-YYYY.pdf</small>
-                    <div className={styles.fileInputWrapper}>
-                        <label htmlFor="proposalFile_th" className={styles.fileInputLabel}>{formData.files.proposalFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
-                        <input type="file" id="proposalFile_th" name="proposalFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
-                        {formData.files.proposalFile_th ? (
-                            <div className={styles.fileInfo}>
-                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_th.name}</span>
-                                <button type="button" onClick={() => handleRemoveFile('proposalFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
-                            </div>
-                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
-                    </div>
-                </div>
-                <div className={styles.fileInputSubgroup}>
-                    <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
-                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_EN_DD-MM-YYYY.pdf</small>
-                    <div className={styles.fileInputWrapper}>
-                        <label htmlFor="proposalFile_en" className={styles.fileInputLabel}>{formData.files.proposalFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
-                        <input type="file" id="proposalFile_en" name="proposalFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
-                        {formData.files.proposalFile_en ? (
-                            <div className={styles.fileInfo}>
-                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_en.name}</span>
-                                <button type="button" onClick={() => handleRemoveFile('proposalFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
-                            </div>
-                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
-                    </div>
-                </div>
-            </div>
-          </div>
+          <div className={`${styles.subSection} ${formData.files.proposalFile_th && formData.files.proposalFile_en ? styles.attached : ''}`}>
+            <label>1. ไฟล์หัวข้อและเค้าโครงวิทยานิพนธ์* (.pdf, .docx)</label>
+            <div className={styles.fileGroup}>
+                <div className={styles.fileInputSubgroup}>
+                    <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
+                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_TH_DD-MM-YYYY.pdf</small>
+                    <div className={styles.fileInputWrapper}>
+                        <label htmlFor="proposalFile_th" className={styles.fileInputLabel}>{formData.files.proposalFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="proposalFile_th" name="proposalFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
+                        {formData.files.proposalFile_th ? (
+                            <div className={styles.fileInfo}>
+                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_th.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('proposalFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
+                            </div>
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
+                    </div>
+                </div>
+                <div className={styles.fileInputSubgroup}>
+                    <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
+                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_PROPOSAL_EN_DD-MM-YYYY.pdf</small>
+                    <div className={styles.fileInputWrapper}>
+                        <label htmlFor="proposalFile_en" className={styles.fileInputLabel}>{formData.files.proposalFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="proposalFile_en" name="proposalFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
+                        {formData.files.proposalFile_en ? (
+                            <div className={styles.fileInfo}>
+                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+                                <span className={styles.fileNameDisplay}>{formData.files.proposalFile_en.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('proposalFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
+                            </div>
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
+                    </div>
+                </div>
+            </div>
+          </div>
 
-          <div className={`${styles.subSection} ${formData.files.coverPageFile_th && formData.files.coverPageFile_en ? styles.attached : ''}`}>
-            <label>2. ไฟล์หน้าปกของหัวข้อและเค้าโครง* (.pdf, .docx)</label>
-            <div className={styles.fileGroup}>
-                <div className={styles.fileInputSubgroup}>
-                    <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
-                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_TH_DDMMYYYY.pdf</small>
-                    <div className={styles.fileInputWrapper}>
-                        <label htmlFor="coverPageFile_th" className={styles.fileInputLabel}>{formData.files.coverPageFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
-                        <input type="file" id="coverPageFile_th" name="coverPageFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
-                        {formData.files.coverPageFile_th ? (
-                            <div className={styles.fileInfo}>
-                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_th.name}</span>
-                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
-                            </div>
-                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
-                    </div>
-                </div>
-                <div className={styles.fileInputSubgroup}>
-                    <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
-                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_EN_DDMMYYYY.pdf</small>
-                    <div className={styles.fileInputWrapper}>
-                        <label htmlFor="coverPageFile_en" className={styles.fileInputLabel}>{formData.files.coverPageFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
-                        <input type="file" id="coverPageFile_en" name="coverPageFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
-                        {formData.files.coverPageFile_en ? (
-                            <div className={styles.fileInfo}>
-                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_en.name}</span>
-                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
-                            </div>
-                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
-                    </div>
-                </div>
-            </div>
-          </div>
-          
-          <div className={`${styles.subSection} ${formData.files.registrationProofFile ? styles.attached : ''}`}>
-            <label>3. ไฟล์สำเนาการลงทะเบียนภาคการศึกษาล่าสุด* (.pdf, .jpg)</label>
-            <small className={styles.fileNamingInstruction}>*กรุณาตั้งชื่อไฟล์เป็น: รหัสนักศึกษา_F2_REGIS_DDMMYYYY.jpg</small>
-            <div className={styles.inlineSelectGroup}>
-              <label htmlFor="registrationSemester">ภาคการศึกษาที่:</label>
-              <select id="registrationSemester" name="registrationSemester" value={formData.registrationSemester} onChange={handleChange} className={styles.inlineSelect} required>
-                <option value="">เลือก</option><option value="1">1</option><option value="2">2</option><option value="ภาคพิเศษ">ภาคพิเศษ</option>
-              </select>
-              <label htmlFor="registrationYear">ปีการศึกษา:</label>
-              <select id="registrationYear" name="registrationYear" value={formData.registrationYear} onChange={handleChange} className={styles.inlineSelect} required>
-                <option value="">เลือกปี</option>
-                {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
-              </select>
-            </div>
-            <div className={styles.fileInputWrapper}>
-              <label htmlFor="registrationProofFile" className={styles.fileInputLabel}>{formData.files.registrationProofFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
-              <input type="file" id="registrationProofFile" name="registrationProofFile" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg"/>
-              {formData.files.registrationProofFile ? (
-                <div className={styles.fileInfo}>
-                  <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                  <span className={styles.fileNameDisplay}>{formData.files.registrationProofFile.name}</span>
-                  <button type="button" onClick={() => handleRemoveFile('registrationProofFile')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
-                </div>
-              ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
-            </div>
-          </div>
-        </fieldset>
-        
-        <fieldset>
-          <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
-          <div className={styles.formGroup}>
-            <label htmlFor="comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
-            <textarea 
-              id="comment" 
-              name="comment"
-              rows="4" 
-              maxLength="250" 
-              placeholder="ความคิดเห็นเพิ่มเติม... (ไม่เกิน 250 ตัวอักษร)"
-              value={formData.comment}
-              onChange={handleChange}
-            />
-            <div className={styles.charCounter}>{formData.comment.length} / 250</div>
-          </div>
-        </fieldset>
-        
-        <button type="submit">📤 ยืนยันและส่งแบบฟอร์ม</button>
-      </form>
-    </div>
+          <div className={`${styles.subSection} ${formData.files.coverPageFile_th && formData.files.coverPageFile_en ? styles.attached : ''}`}>
+            <label>2. ไฟล์หน้าปกของหัวข้อและเค้าโครง* (.pdf, .docx)</label>
+            <div className={styles.fileGroup}>
+                <div className={styles.fileInputSubgroup}>
+                    <label className={styles.subLabel}>ไฟล์ภาษาไทย:</label>
+                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_TH_DDMMYYYY.pdf</small>
+                    <div className={styles.fileInputWrapper}>
+                        <label htmlFor="coverPageFile_th" className={styles.fileInputLabel}>{formData.files.coverPageFile_th ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="coverPageFile_th" name="coverPageFile_th" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
+                        {formData.files.coverPageFile_th ? (
+                            <div className={styles.fileInfo}>
+                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_th.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_th')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
+                            </div>
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
+                    </div>
+                </div>
+                <div className={styles.fileInputSubgroup}>
+                    <label className={styles.subLabel}>ไฟล์ภาษาอังกฤษ:</label>
+                    <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F2_COVER_EN_DDMMYYYY.pdf</small>
+                    <div className={styles.fileInputWrapper}>
+                        <label htmlFor="coverPageFile_en" className={styles.fileInputLabel}>{formData.files.coverPageFile_en ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+                        <input type="file" id="coverPageFile_en" name="coverPageFile_en" onChange={handleFileChange} accept=".pdf,.doc,.docx"/>
+                        {formData.files.coverPageFile_en ? (
+                            <div className={styles.fileInfo}>
+                                <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+                                <span className={styles.fileNameDisplay}>{formData.files.coverPageFile_en.name}</span>
+                                <button type="button" onClick={() => handleRemoveFile('coverPageFile_en')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
+                            </div>
+                        ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
+                    </div>
+                </div>
+            </div>
+          </div>
+          
+          <div className={`${styles.subSection} ${formData.files.registrationProofFile ? styles.attached : ''}`}>
+            <label>3. ไฟล์สำเนาการลงทะเบียนภาคการศึกษาล่าสุด* (.pdf, .jpg)</label>
+            <small className={styles.fileNamingInstruction}>*กรุณาตั้งชื่อไฟล์เป็น: รหัสนักศึกษา_F2_REGIS_DDMMYYYY.jpg</small>
+            <div className={styles.inlineSelectGroup}>
+              <label htmlFor="registrationSemester">ภาคการศึกษาที่:</label>
+              <select id="registrationSemester" name="registrationSemester" value={formData.registrationSemester} onChange={handleChange} className={styles.inlineSelect} required>
+                <option value="">เลือก</option><option value="1">1</option><option value="2">2</option><option value="ภาคพิเศษ">ภาคพิเศษ</option>
+              </select>
+              <label htmlFor="registrationYear">ปีการศึกษา:</label>
+              <select id="registrationYear" name="registrationYear" value={formData.registrationYear} onChange={handleChange} className={styles.inlineSelect} required>
+                <option value="">เลือกปี</option>
+                {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
+            <div className={styles.fileInputWrapper}>
+              <label htmlFor="registrationProofFile" className={styles.fileInputLabel}>{formData.files.registrationProofFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}</label>
+              <input type="file" id="registrationProofFile" name="registrationProofFile" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg"/>
+              {formData.files.registrationProofFile ? (
+                <div className={styles.fileInfo}>
+                  <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+                  <span className={styles.fileNameDisplay}>{formData.files.registrationProofFile.name}</span>
+                  <button type="button" onClick={() => handleRemoveFile('registrationProofFile')} className={styles.removeFileBtn}><FontAwesomeIcon icon={faTimes} /></button>
+                </div>
+              ) : (<span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>)}
+            </div>
+          </div>
+        </fieldset>
+        
+        <fieldset>
+          <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
+          <div className={styles.formGroup}>
+            <label htmlFor="comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
+            <textarea 
+              id="comment" 
+              name="comment"
+              rows="4" 
+              maxLength="250" 
+              placeholder="ความคิดเห็นเพิ่มเติม... (ไม่เกิน 250 ตัวอักษร)"
+              value={formData.comment}
+              onChange={handleChange}
+            />
+            <div className={styles.charCounter}>{formData.comment.length} / 250</div>
+          </div>
+        </fieldset>
+        
+        <button type="submit">📤 ยืนยันและส่งแบบฟอร์ม</button>
+      </form>
+    </div>
   );
 }
 

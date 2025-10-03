@@ -1,0 +1,238 @@
+/* src/pages/Admin_Page/ManageStructuresPage.module.css */
+
+/* --- Reuse styles from AdminHomePage.module.css --- */
+.container {
+    padding: 20px; /* เพิ่ม padding ให้กับ container หลัก */
+}
+
+.contentHeader {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* ให้ wrap ถ้าหน้าจอเล็ก */
+    gap: 15px;
+}
+.contentHeader h1 {
+    font-size: 28px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.contentHeader > p {
+    font-size: 16px;
+    color: #555;
+    margin-top: 5px; /* ปรับ margin-top ให้เหมาะสม */
+    margin-bottom: 0;
+}
+
+/* Add Button */
+.addButton {
+    background-color: var(--color-primary); /* สีชมพู */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.addButton:hover {
+    background-color: var(--color-primary-dark); /* สีชมพูเข้มขึ้นเมื่อ hover */
+}
+
+
+/* --- Tabs --- */
+.tabContainer {
+    display: flex;
+    gap: 20px; /* ระยะห่างระหว่างปุ่มแท็บ */
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.tabButton {
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6c757d; /* สีเทาสำหรับแท็บที่ไม่ถูกเลือก */
+    padding: 10px 5px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    display: flex; /* เพื่อจัด icon กับ text */
+    align-items: center;
+    gap: 8px;
+}
+.tabButton:hover {
+    color: #333;
+}
+.activeTab {
+    font-weight: 600;
+    color: var(--color-primary); /* ใช้สีหลักของเว็บ (สีชมพู) */
+    border-bottom-color: var(--color-primary);
+}
+
+
+/* --- Table Card --- */
+.tableCard {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.tableHeader {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex; /* เพิ่มเพื่อจัดปุ่ม Add */
+    justify-content: space-between; /* จัดเนื้อหาให้อยู่คนละฝั่ง */
+    align-items: center;
+}
+.tableHeader h2 {
+    margin: 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.tableContainer {
+    overflow-x: auto; /* เพิ่ม scroll bar ในแนวนอนถ้าตารางกว้างเกิน */
+}
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+.dataTable th, .dataTable td {
+    padding: 12px 20px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+.dataTable th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 13px;
+    position: sticky;
+    top: 0;
+}
+.dataTable tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Action buttons in table */
+.actionCell {
+    text-align: center;
+    white-space: nowrap; /* ป้องกันปุ่มตัดบรรทัด */
+}
+.actionBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 0 5px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+.actionBtn.editBtn {
+    color: #0d6efd; /* Blue */
+}
+.actionBtn.editBtn:hover {
+    background-color: #e6f7ff;
+}
+.actionBtn.deleteBtn {
+    color: #dc3545; /* Red */
+}
+.actionBtn.deleteBtn:hover {
+    background-color: #ffe6e8;
+}
+
+/* --- Modal Styles --- */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modalContent {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+.modalContent h3 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 24px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+.formGroup {
+    margin-bottom: 20px;
+}
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+.formGroup input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box; /* ทำให้ padding ไม่ดันกว้างออกไป */
+}
+.formGroup input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.25);
+}
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+.btnPrimary {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btnPrimary:hover {
+    background-color: var(--color-primary-dark);
+}
+.btnSecondary {
+    background-color: #6c757d;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btnSecondary:hover {
+    background-color: #5a6268;
+}

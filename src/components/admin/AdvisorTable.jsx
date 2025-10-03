@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import styles from '../../pages/Admin_Page/ManageUsersPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPencilAlt, faTrashAlt, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
-import PaginationControls from './PaginationControls'; // ตรวจสอบให้แน่ใจว่า path ถูกต้อง
+import PaginationControls from './PaginationControls';
 
-// ✅ 1. เพิ่ม onDelete เข้าไปใน props ที่รับเข้ามา
-function AdvisorTable({ advisors, navigate, onDelete }) {
+function AdvisorTable({ advisors, onDelete }) {
+    const navigate = useNavigate();
     const [sortConfig, setSortConfig] = useState({ key: 'full_name', direction: 'ascending' });
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -52,10 +52,7 @@ function AdvisorTable({ advisors, navigate, onDelete }) {
     };
 
     const totalPages = Math.ceil(sortedAdvisors.length / itemsPerPage);
-    const currentTableData = sortedAdvisors.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    const currentTableData = sortedAdvisors.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleRowClick = (advisorId) => {
         navigate(`/admin/manage-users/advisor/${advisorId}`);
@@ -83,25 +80,12 @@ function AdvisorTable({ advisors, navigate, onDelete }) {
                                     <td>{advisor.email || '-'}</td>
                                     <td>{advisor.phone || '-'}</td>
                                     <td>{advisor.type || '-'}</td>
-                                    <td>
-                                        {advisor.roles && advisor.roles.length > 0 
-                                            ? advisor.roles.join(', ') 
-                                            : 'ยังไม่ได้กำหนด'
-                                        }
-                                    </td>
+                                    <td>{advisor.roles && advisor.roles.length > 0 ? advisor.roles.join(', ') : 'ยังไม่ได้กำหนด'}</td>
                                     <td className={styles.actionCell}>
                                         <button className={styles.actionBtn} title="แก้ไข" onClick={(e) => { e.stopPropagation(); handleRowClick(advisor.advisor_id); }}>
                                             <FontAwesomeIcon icon={faPencilAlt} />
                                         </button>
-                                        {/* ✅ 2. แก้ไข onClick ของปุ่มลบ */}
-                                        <button 
-                                            className={styles.actionBtn} 
-                                            title="ลบ" 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); // หยุดไม่ให้ event click ลามไปถึง tr
-                                                onDelete(advisor.advisor_id); // เรียกใช้ฟังก์ชัน onDelete ที่ได้รับมา
-                                            }}
-                                        >
+                                        <button className={styles.actionBtn} title="ลบ" onClick={(e) => { e.stopPropagation(); onDelete(advisor.advisor_id); }}>
                                             <FontAwesomeIcon icon={faTrashAlt} />
                                         </button>
                                     </td>
@@ -109,22 +93,17 @@ function AdvisorTable({ advisors, navigate, onDelete }) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className={styles.noDataRow}>ไม่พบข้อมูลอาจารย์ตามเงื่อนไข</td>
+                                <td colSpan="6" className={styles.noDataRow}>ไม่พบข้อมูลอาจารย์</td>
                             </tr>
                         )}
                     </tbody>
                 </table>
             </div>
-            
-            {totalPages > 1 &&
+            {totalPages > 1 && (
                 <div className={styles.pagination}>
-                    <PaginationControls 
-                        currentPage={currentPage} 
-                        totalPages={totalPages}
-                        onPageChange={page => setCurrentPage(page)}
-                    />
+                    <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
-            }
+            )}
         </>
     );
 }

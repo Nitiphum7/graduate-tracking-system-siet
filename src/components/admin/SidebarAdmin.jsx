@@ -2,15 +2,13 @@ import React from 'react';
 import styles from './SidebarAdmin.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInbox, faUserTie, faUserSecret, faUserShield, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
-
-// ✅ รับ props (activeSection, setSection) จาก AdminLayout เพื่อทำงานร่วมกัน
 function SidebarAdmin({ activeSection, setSection, notifications }) {
   
   // ✅ โครงสร้างข้อมูลเมนูที่ชัดเจนและง่ายต่อการแก้ไขเพิ่มเติมในอนาคต
   const menuItems = [
     { id: 'pending-review', icon: faInbox, text: 'เอกสารรอตรวจ' },
     { id: 'pending-advisor', icon: faUserTie, text: 'อาจารย์ที่ปรึกษาอนุมัติ' },
-    { id: 'pending-external', icon: faUserSecret, text: 'อาจารย์ภายนอกอนุมัติ' },
+    { id: 'pending-external-advisor', icon: faUserSecret, text: 'อาจารย์ภายนอกอนุมัติ' },
     { id: 'pending-executive', icon: faUserShield, text: 'ผู้บริหารอนุมัติ' },
     { id: 'all-documents', icon: faFolderOpen, text: 'เอกสารทั้งหมด' },
   ];

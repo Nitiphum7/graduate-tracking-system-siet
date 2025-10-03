@@ -4,8 +4,6 @@ import styles from '../User_Page/DocumentDetailPage.module.css'; // ใช้ CS
 import { useAuth } from '../../hooks/useAuth.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHistory } from '@fortawesome/free-solid-svg-icons';
-
-// Import Components
 import Form1Detail from '../../components/document-details/Form1Detail';
 import Form2Detail from '../../components/document-details/Form2Detail';
 import Form3Detail from '../../components/document-details/Form3Detail';
@@ -14,6 +12,7 @@ import Form5Detail from '../../components/document-details/Form5Detail';
 import Form6Detail from '../../components/document-details/Form6Detail';
 import ExamResultDetail from '../../components/document-details/ExamResultDetail';
 import AdminWorkflowCard from '../../components/admin/AdminWorkflowCard';
+
 
 const detailComponentMap = {
     1: Form1Detail,

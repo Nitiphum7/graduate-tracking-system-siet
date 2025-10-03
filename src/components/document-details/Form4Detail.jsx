@@ -27,7 +27,7 @@ function Form4Detail({ doc, user, advisors }) { // ✅ 1. ลด Props ที่
             <h4><FontAwesomeIcon icon={faUserGraduate} /> ข้อมูลผู้ยื่นคำร้อง</h4>
             <ul className={styles.infoList}>
                  {/* ✅ 4. อ่านข้อมูลโปรไฟล์จาก prop 'user' โดยตรง */}
-                <li><label>ชื่อ-นามสกุล:</label> <span>{user.fullname}</span></li>
+                <li><label>ชื่อ-นามสกุล:</label> <span>{`${user.prefix_th} ${user.first_name_th} ${user.last_name_th}`}</span></li>
                 <li><label>รหัสนักศึกษา:</label> <span>{user.student_id}</span></li>
                 <li><label>หลักสูตร:</label> <span>{user.program_name}</span></li>
                 <li><label>ภาควิชา:</label> <span>{user.department_name}</span></li>

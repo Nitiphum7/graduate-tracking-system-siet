@@ -3,9 +3,10 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './DocumentDetailPage.module.css';
 import { useAuth } from '../../hooks/useAuth.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faHistory, faSpinner, faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faThumbsUp, faThumbsDown, faHistory, faEdit, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 
-// Import Components (เหมือนเดิม)
+import { getSubmissionDetail, processApproval } from '../../utils/api'; 
+
 import Form1Detail from '../../components/document-details/Form1Detail';
 import Form2Detail from '../../components/document-details/Form2Detail';
 import Form3Detail from '../../components/document-details/Form3Detail';
@@ -29,76 +30,60 @@ const formatThaiDateTime = (isoString) => {
 
 function DocumentDetailPage() {
     const { docId } = useParams();
-    const { user: loggedInUser, loading: authLoading, token } = useAuth();
+    const { user: loggedInUser, loading: authLoading } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation(); // ✅ 1. เพิ่ม useLocation เพื่อรับ taskId
+    const location = useLocation();
 
     const [docData, setDocData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // ✅ 2. เพิ่ม State สำหรับการอนุมัติของ Advisor
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [comment, setComment] = useState('');
+    
+    const SERVER_BASE_URL = 'http://localhost:3000';
 
-    const taskId = location.state?.taskId; // ดึง taskId ที่ส่งมาจากหน้า MyTasksPage
-    const approverRoles = ['advisor', 'program_chair', 'executive']; // Role ที่อนุมัติได้
+    const taskId = location.state?.taskId;
+    const approverRoles = ['advisor', 'program_chair', 'executive', 'assistant_rector'];
     const isApprover = loggedInUser && approverRoles.includes(loggedInUser.role_name);
 
     useEffect(() => {
-        if (authLoading || !loggedInUser) return;
+        if (authLoading) return;
+        if (!loggedInUser) {
+            navigate('/login');
+            return;
+        }
 
         const loadInitialData = async () => {
-            // ... (ส่วนดึงข้อมูลเหมือนเดิม) ...
+            setLoading(true);
             try {
-                setLoading(true);
-                const response = await fetch(`http://localhost:3000/api/submissions/${docId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error(`ไม่สามารถดึงข้อมูลได้ (Error: ${response.status})`);
-                const allDataFromApi = await response.json();
-                setDocData(allDataFromApi);
+                const response = await getSubmissionDetail(docId);
+                setDocData(response.data);
             } catch (err) {
-                setError(err.message);
+                setError(err.response?.data?.message || err.message);
             } finally {
                 setLoading(false);
             }
         };
         loadInitialData();
-    }, [docId, authLoading, loggedInUser, token]);
+    }, [docId, authLoading, loggedInUser, navigate]);
 
-    // ✅ 3. เพิ่มฟังก์ชันสำหรับกดอนุมัติ/ตีกลับ
     const handleApprovalAction = async (status) => {
         if (!taskId) {
-            alert("ข้อผิดพลาด: ไม่พบ Task ID สำหรับการอนุมัติ!");
+            alert("ข้อผิดพลาด: ไม่พบ Task ID!");
             return;
         }
         setIsSubmitting(true);
         try {
-            const response = await fetch(`http://localhost:3000/api/approvals/${taskId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ newStatus: status, comment: comment })
-            });
-            if (!response.ok) {
-                 const errData = await response.json();
-                 throw new Error(errData.message || 'เกิดข้อผิดพลาดในการดำเนินการ');
-            }
-
+            await processApproval(taskId, status, comment);
             alert(`ดำเนินการ "${status === 'approved' ? 'อนุมัติ' : 'ตีกลับ'}" สำเร็จ!`);
-            navigate('/advisor/tasks'); // กลับไปหน้ารายการ Task
-
+            navigate('/advisor/home');
         } catch (err) {
-            alert(`เกิดข้อผิดพลาด: ${err.message}`);
+            alert(`เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message}`);
         } finally {
             setIsSubmitting(false);
         }
     };
-
-
+    
     const statusClass = (statusName) => {
         if (!statusName) return styles.pending;
         const approved = ['อนุมัติ', 'อนุมัติแล้ว', 'ผ่าน', 'ผ่านเกณฑ์'];
@@ -112,25 +97,19 @@ function DocumentDetailPage() {
     if (error) return <div className={styles.errorText}>เกิดข้อผิดพลาด: {error}</div>;
     if (!docData) return <div>ไม่พบข้อมูลเอกสาร</div>;
 
-    const { documentDetail = {} } = docData || {};
+    const { documentDetail = {} } = docData;
     const DetailComponent = detailComponentMap[documentDetail.document_type_id];
+    
+    const canEdit = loggedInUser?.role_name === 'student' && ['ตีกลับ', 'ส่งกลับแก้ไข', 'ไม่อนุมัติ'].includes(documentDetail.status);
 
     return (
         <main className={styles.detailContainer}>
             <div className={styles.documentContent}>
                 <div className={styles.contentHeader}>
                     <h1>{documentDetail.title || 'กำลังโหลด...'}</h1>
-                    {/* ✅ 4. แก้ไขปุ่ม "กลับ" ให้ทำงานตาม Role */}
-                    <Link 
-                        to={isApprover ? "/advisor/tasks" : "/student/status"} 
-                        className={styles.backLink}
-                    >
-                        <FontAwesomeIcon icon={faArrowLeft} /> 
-                        {isApprover ? "กลับหน้ารายการอนุมัติ" : "กลับหน้ารวมสถานะ"}
-                    </Link>
                 </div>
                 
-                {/* ... (ส่วนแสดงรายละเอียดเอกสารเหมือนเดิม) ... */}
+                {/* --- ส่วนแสดงรายละเอียดเฉพาะของฟอร์ม --- */}
                 <div className={styles.detailCard}>
                     {DetailComponent ? (
                         <DetailComponent 
@@ -143,8 +122,21 @@ function DocumentDetailPage() {
                     )}
                 </div>
 
-
-                {/* ✅ 5. เพิ่ม "แผงควบคุมสำหรับ Advisor" ที่จะแสดงเมื่อเงื่อนไขถูกต้อง */}
+                
+                
+                {/* --- ส่วนแสดงความคิดเห็น --- */}
+                <div className={styles.detailCard}>
+                    <h3>ความคิดเห็นเพิ่มเติม (จากผู้ยื่น)</h3>
+                    <p className={styles.commentBox}>{documentDetail.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
+                </div>
+                {documentDetail.admin_comment && (
+                    <div className={styles.detailCard}>
+                        <h3>ความคิดเห็น/เหตุผล (จากผู้ตรวจสอบ)</h3>
+                        <p className={styles.commentBox}>{documentDetail.admin_comment}</p>
+                    </div>
+                )}
+                
+                {/* --- แผงควบคุมสำหรับ Advisor --- */}
                 {isApprover && taskId && (
                     <div className={`${styles.detailCard} ${styles.actionCard}`}>
                         <h3>ดำเนินการอนุมัติ</h3>
@@ -155,7 +147,7 @@ function DocumentDetailPage() {
                             onChange={(e) => setComment(e.target.value)}
                             disabled={isSubmitting}
                         />
-                        <div className={styles.buttonGroup}>
+                        <div className={styles.approvalButtonGroup}>
                             <button 
                                 className={styles.rejectBtn} 
                                 onClick={() => handleApprovalAction('rejected')} 
@@ -187,8 +179,8 @@ function DocumentDetailPage() {
                     </div>
                 )}
             </div>
-
-            {/* ... (Sidebar เหมือนเดิม) ... */}
+            
+            {/* --- Sidebar --- */}
             <aside className={styles.documentSidebar}>
                 <div className={`${styles.statusCard} ${statusClass(documentDetail.status)}`}>
                     <div className={styles.statusText}>
@@ -196,12 +188,17 @@ function DocumentDetailPage() {
                         <h2>{documentDetail.status}</h2>
                     </div>
                 </div>
+                {canEdit && (
+                    <Link to={`/student/edit-doc/${docId}`} className={styles.editButton}>
+                        <FontAwesomeIcon icon={faEdit} /> ไปที่หน้าแก้ไข
+                    </Link>
+                )}
                 <div className={styles.detailCard}>
                     <h3>ข้อมูลการยื่น</h3>
                     <ul className={styles.infoList}>
                         <li><label>ประเภทเอกสาร:</label> <span>{documentDetail.title}</span></li>
                         <li><label>วันที่ยื่น:</label> <span>{formatThaiDateTime(documentDetail.submission_date)}</span></li>
-                        <li><label>วันที่ดำเนินการล่าสุด:</label> <span>{formatThaiDateTime(documentDetail.action_date)}</span></li>
+                        <li><label>ดำเนินการล่าสุด:</label> <span>{formatThaiDateTime(documentDetail.action_date)}</span></li>
                     </ul>
                 </div>
                 <div className={styles.detailCard}>
@@ -210,7 +207,7 @@ function DocumentDetailPage() {
                         {documentDetail.history && documentDetail.history.length > 0 ? (
                             documentDetail.history.map((log, index) => (
                                 <li key={index}>
-                                    <div className={styles.logAction}>{log.action}</div>
+                                   <div className={styles.logAction}>{log.action}</div>
                                     <div className={styles.logActor}>โดย: {log.actor_name}</div>
                                     <div className={styles.logDate}>{formatThaiDateTime(log.log_date)}</div>
                                     {log.log_comment && <p className={styles.logComment}><b>เหตุผล:</b> {log.log_comment}</p>}
@@ -227,3 +224,4 @@ function DocumentDetailPage() {
 }
 
 export default DocumentDetailPage;
+

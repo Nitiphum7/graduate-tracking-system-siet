@@ -124,3 +124,37 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* สำหรับจัด Item ใน li ให้มีปุ่มอยู่ข้างๆ */
+.docItem {
+    display: flex;
+    justify-content: space-between; /* จัดให้ Link และปุ่มอยู่คนละฝั่ง */
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* ทำให้ Link หลักกินพื้นที่ส่วนใหญ่ */
+.docLink {
+    flex-grow: 1; /* ให้ Link ขยายเพื่อกินพื้นที่ที่เหลือ */
+    display: flex;
+    flex-direction: column;
+    text-decoration: none; /* ลบเส้นใต้ Link */
+    color: #333;
+}
+
+/* สไตล์สำหรับปุ่มแก้ไข */
+.editButton {
+    background-color: #ffc107; /* สีเหลือง */
+    color: #333;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    margin-left: 10px; /* เว้นระยะห่างจากรายละเอียดเอกสาร */
+    transition: background-color 0.2s;
+}
+
+.editButton:hover {
+    background-color: #e0a800;
+}

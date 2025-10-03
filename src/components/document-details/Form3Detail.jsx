@@ -37,7 +37,7 @@ function Form3Detail({ doc, user, advisors }) {
         <>
             <h4><FontAwesomeIcon icon={faUserGraduate} /> ข้อมูลผู้ยื่นคำร้อง</h4>
             <ul className={styles.infoList}>
-                <li><label>ชื่อ-นามสกุล:</label> <span>{user.fullname}</span></li>
+                <li><label>ชื่อ-นามสกุล:</label> <span>{`${user.prefix_th} ${user.first_name_th} ${user.last_name_th}`}</span></li>
                 <li><label>รหัสนักศึกษา:</label> <span>{user.student_id}</span></li>
                 <li><label>หลักสูตร:</label> <span>{user.program_name || '-'}</span></li>
                 <li><label>ภาควิชา:</label> <span>{user.department_name || '-'}</span></li>
@@ -73,16 +73,24 @@ function Form3Detail({ doc, user, advisors }) {
                 {files.length > 0 ? (
                     files.map((file, index) => (
                         <li key={index}>
-                            <label>{file.type || 'เอกสารแนบ'}:</label>
-                            <a 
-                                href={`${API_URL}${file.path}`}
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className={styles.fileLink}
-                            >
-                               <FontAwesomeIcon icon={faFilePdf} /> {file.name}
-                            </a>
-                        </li>
+                        {/* ✅ โค้ดที่แนะนำให้แก้ไข: สร้างตัวแปร Label ที่เหมาะสม */}
+                        <label>
+                            {file.type === 'document_file' 
+                                ? 'ไฟล์เค้าโครงวิทยานิพนธ์ฉบับสมบูรณ์' // แสดงข้อความภาษาไทยแทน document_file
+                                : file.type || 'ไฟล์แนบ'}
+                            :
+                        </label>
+                        
+                        {/* ส่วนลิงก์ที่แก้ไขไปแล้ว (ถูกต้อง) */}
+                        <a 
+                            href={new URL(file.path, API_URL).href} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className={styles.fileLink}
+                        >
+                            <FontAwesomeIcon icon={faFilePdf} /> {file.name}
+                        </a>
+                    </li>
                     ))
                 ) : (
                     <li>ไม่มีไฟล์แนบ</li>

@@ -1,0 +1,138 @@
+/* src/pages/Advisor_Page/MyTasksPage.module.css */
+
+.dashboardContainer {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header h1 {
+    font-size: 2rem;
+    color: #343a40;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header p {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.tableContainer {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.tableTitle {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tableContainer table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tableContainer thead {
+    background-color: #f8f9fa;
+}
+
+.tableContainer th {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 700;
+    color: #495057;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tableContainer td {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.tableContainer tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* 🎨 Theme Change: เปลี่ยนสีลิงก์ชื่อนักศึกษา */
+.studentNameLink {
+    font-weight: 600;
+    color: var(--color-primary); /* <-- ใช้สีธีมหลัก */
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.studentNameLink:hover {
+    color: #a12c62; /* <-- สีธีมหลักที่เข้มขึ้นเมื่อ hover */
+    text-decoration: underline;
+}
+
+.studentId {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.roleCell {
+    font-weight: 500;
+}
+
+/* 🎨 Theme Change: ปรับสไตล์ปุ่มให้เข้ากับธีม */
+.actionButton {
+    background-color: var(--color-primary); /* <-- ใช้สีธีมหลัก */
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.actionButton:hover {
+    background-color: #a12c62; /* <-- สีธีมหลักที่เข้มขึ้นเมื่อ hover */
+    transform: translateY(-1px);
+}
+
+/* 🎨 Theme Change: ปรับปุ่มรอง (ดูโปรไฟล์) ให้เป็นแบบ Outline */
+.viewProfileButton {
+    background-color: transparent;
+    color: #6c757d; /* สีเทา */
+    border: 1px solid #ced4da;
+}
+
+.viewProfileButton:hover {
+    background-color: #e9ecef;
+    color: #343a40;
+}
+
+
+/* --- Loading, Error, No Data States --- */
+.loadingText, .errorText, .noDataText {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.errorText {
+    color: #dc3545; /* สีแดงสำหรับ Error */
+}

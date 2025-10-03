@@ -2,6 +2,8 @@ import React, { useEffect, useReducer, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './HomePage.module.css';
 import { useAuth } from '../../hooks/useAuth';
+import { getStudentDashboard } from '../../utils/api';
+
 
 // --- Card Components ---
 
@@ -130,7 +132,7 @@ const dataFetchReducer = (state, action) => {
 };
 
 function HomePage() {
-  const { user, loading: authLoading, token } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [state, dispatch] = useReducer(dataFetchReducer, {
@@ -140,27 +142,15 @@ function HomePage() {
     error: null,
   });
   
-  const loadDashboard = useCallback(async (userId, authToken) => {
+  const loadDashboard = useCallback(async (userId) => {
     dispatch({ type: 'FETCH_INIT' });
     try {
-      // ✅✅✅ --- จุดที่ 2: แก้ไขการเรียก API --- ✅✅✅
-      // ลบ http://localhost:3000 ออก เพื่อให้ไปใช้ proxy ใน package.json แทน
-      const response = await fetch(`/api/dashboard/student/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ไม่สามารถดึงข้อมูลแดชบอร์ดได้');
-      }
-      
-      const data = await response.json();
-      dispatch({ type: 'FETCH_SUCCESS', payload: data });
-
+      // ⭐ 3. เรียกใช้ฟังก์ชันจาก api.js ที่มีการแนบ Token อัตโนมัติ ⭐
+      const response = await getStudentDashboard(userId);
+      dispatch({ type: 'FETCH_SUCCESS', payload: response.data });
     } catch (err) {
-      dispatch({ type: 'FETCH_FAILURE', payload: err.message });
+      const errorMessage = err.response?.data?.message || err.message;
+      dispatch({ type: 'FETCH_FAILURE', payload: errorMessage });
     }
   }, []);
 
@@ -169,14 +159,14 @@ function HomePage() {
       return; 
     }
 
-    if (!user || !token) {
+    if (!user) {
       navigate('/login');
       return;
     }
 
-    loadDashboard(user.id, token);
+    loadDashboard(user.id);
 
-  }, [user, token, authLoading, navigate, loadDashboard]);
+  }, [user, authLoading, navigate, loadDashboard]);
 
   if (authLoading || state.isLoading) {
     return <div className={styles.loading}>กำลังโหลดข้อมูลแดชบอร์ด...</div>;

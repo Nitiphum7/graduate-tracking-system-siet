@@ -1,170 +1,184 @@
-// src/pages/Admin_Page/ManageUsersPage.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import styles from './ManageUsersPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faUserGraduate, faUserTie, faPlus, faFilter, faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faChartPie, faUserGraduate, faUserTie, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 
-// Import ตารางที่เราสร้างขึ้นมาใหม่
+// Import Components ที่จะรับ Props
 import StudentTable from '../../components/admin/StudentTable';
-import AdvisorTable from '../../components/admin/AdvisorTable'; // ✅ 1. Import AdvisorTable
+import AdvisorTable from '../../components/admin/AdvisorTable';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const PieChartCard = ({ data, labels }) => {
-    const chartData = {
-        labels: labels,
-        datasets: [{
-            label: ' จำนวน',
-            data: data,
-            backgroundColor: ['#EC4899', '#8B5CF6', '#F59E0B', '#10B981'],
-            borderColor: '#FFFFFF',
-            borderWidth: 2,
-        }],
+// Helper function สำหรับสร้าง Header
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn("Authentication token not found.");
+        return {};
+    }
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
     };
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        },
-    };
-    return <div className={styles.chartContainer}><Pie data={chartData} options={options} /></div>;
 };
 
-
+// --- Main Page Component ---
 function ManageUsersPage() {
     const { activeSection } = useOutletContext();
-    const [masterData, setMasterData] = useState({ students: [], advisors: [] });
-    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // ✅✅✅ แก้ไขบรรทัดนี้: เปลี่ยนจาก 'user_token' เป็น 'token' ✅✅✅
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    console.error("No token found!");
-                    // เพิ่มการป้องกัน: อาจจะนำทางผู้ใช้กลับไปหน้า login
-                    // navigate('/login'); 
-                    setLoading(false); // หยุดการโหลด
-                    return;
-                }
+    // State หลักสำหรับเก็บข้อมูลทั้งหมด
+    const [masterData, setMasterData] = useState({ students: [], advisors: [] });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-                const headers = {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                };
+    // ฟังก์ชันดึงข้อมูลจาก Server
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const headers = getAuthHeaders();
+            const [studentsRes, advisorsRes] = await Promise.all([
+                fetch('http://localhost:3000/api/students', { headers }),
+                fetch('http://localhost:3000/api/advisors', { headers })
+            ]);
 
-                const [studentsRes, advisorsRes] = await Promise.all([
-                    fetch('/api/students', { headers }),
-                    fetch('/api/advisors', { headers })
-                ]);
-
-                if (!studentsRes.ok || !advisorsRes.ok) {
-                    // หาก Token หมดอายุ (Server ตอบกลับ 401 หรือ 403)
-                    if (studentsRes.status === 401 || studentsRes.status === 403 || advisorsRes.status === 401 || advisorsRes.status === 403) {
-                         console.error("Token is invalid or expired.");
-                         // อาจจะเคลียร์ token เก่าแล้วพาไปหน้า login
-                         // localStorage.removeItem('token');
-                         // navigate('/login');
-                    }
-                    throw new Error('ไม่สามารถดึงข้อมูลจาก Server ได้');
-                }
-
-                const students = await studentsRes.json();
-                const advisors = await advisorsRes.json();
-
-             console.log("ข้อมูล ADVISORS ที่ได้รับจาก SERVER:", advisors); 
-
-                setMasterData({ students, advisors });
-            } catch (error) {
-                console.error("Failed to fetch user data:", error);
-            } finally {
-                setLoading(false);
+            if (!studentsRes.ok || !advisorsRes.ok) {
+                throw new Error('Failed to fetch data from server.');
             }
-        };
+
+            const studentsData = await studentsRes.json();
+            const advisorsData = await advisorsRes.json();
+            setMasterData({ students: studentsData, advisors: advisorsData });
+        } catch (error) {
+            setError("ไม่สามารถดึงข้อมูลผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
     }, []);
 
-    if (loading) return <div>Loading...</div>;
-
-    const handleAddNewStudent = () => {
-        navigate('/admin/manage-users/student/new');
-    };
-    
-    const handleAddNewAdvisor = () => {
-        navigate('/admin/manage-users/advisor/new');
-    };
-
-    const handleDeleteStudent = (studentIdToDelete) => {
+    // ฟังก์ชันลบนักศึกษา (เชื่อม Endpoint)
+    const handleDeleteStudent = async (studentIdToDelete) => {
         if (window.confirm(`คุณต้องการลบนักศึกษา ID: ${studentIdToDelete} ใช่หรือไม่?`)) {
-            const updatedStudents = masterData.students.filter(student => student.student_id !== studentIdToDelete);
-            
-            setMasterData(prevData => ({
-                ...prevData,
-                students: updatedStudents
-            }));
-
-            localStorage.setItem('savedStudents', JSON.stringify(updatedStudents));
-            
-            alert(`ลบนักศึกษา ID: ${studentIdToDelete} เรียบร้อยแล้ว`);
+            try {
+                const response = await fetch(`http://localhost:3000/api/students/${studentIdToDelete}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete student.');
+                }
+                alert(`ลบนักศึกษา ID: ${studentIdToDelete} เรียบร้อยแล้ว`);
+                // ดึงข้อมูลใหม่หลังลบสำเร็จ
+                fetchData();
+            } catch (err) {
+                alert(`เกิดข้อผิดพลาด: ${err.message}`);
+            }
         }
     };
 
-    // ✅ 1. เพิ่มฟังก์ชันสำหรับลบอาจารย์
-    const handleDeleteAdvisor = (advisorIdToDelete) => {
+    // ฟังก์ชันลบอาจารย์ (เชื่อม Endpoint)
+    const handleDeleteAdvisor = async (advisorIdToDelete) => {
         if (window.confirm(`คุณต้องการลบข้อมูลอาจารย์ ID: ${advisorIdToDelete} ใช่หรือไม่?`)) {
-            // กรองข้อมูลอาจารย์ที่จะลบออก
-            const updatedAdvisors = masterData.advisors.filter(advisor => advisor.advisor_id !== advisorIdToDelete);
-
-            // อัปเดต State
-            setMasterData(prevData => ({
-                ...prevData,
-                advisors: updatedAdvisors
-            }));
-
-            // อัปเดต Local Storage
-            localStorage.setItem('savedAdvisors', JSON.stringify(updatedAdvisors));
-            
-            alert(`ลบข้อมูลอาจารย์ ID: ${advisorIdToDelete} เรียบร้อยแล้ว`);
+            try {
+                const response = await fetch(`http://localhost:3000/api/advisors/${advisorIdToDelete}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete advisor.');
+                }
+                alert(`ลบข้อมูลอาจารย์ ID: ${advisorIdToDelete} เรียบร้อยแล้ว`);
+                // ดึงข้อมูลใหม่หลังลบสำเร็จ
+                fetchData();
+            } catch (err) {
+                alert(`เกิดข้อผิดพลาด: ${err.message}`);
+            }
         }
     };
 
+    if (loading) return <p className={styles.loadingText}>Loading data from server...</p>;
+    if (error) return <p className={styles.errorText}>{error}</p>;
+
+    // ฟังก์ชัน Render หลัก
     const renderSection = () => {
         switch (activeSection) {
             case 'students':
-                return <ManageStudentsSection students={masterData.students} advisors={masterData.advisors} navigate={navigate} />;
+                return (
+                    <section>
+                        <h1><FontAwesomeIcon icon={faUserGraduate} /> จัดการรายชื่อนักศึกษา</h1>
+                        <p>เพิ่ม แก้ไข และดูข้อมูลนักศึกษาทั้งหมดในระบบ</p>
+                        <div className={styles.tableCard}>
+                             <div className={styles.tableHeader}>
+                                <h2>รายชื่อนักศึกษา</h2>
+                                <button className={styles.btnPrimary} onClick={() => navigate('/admin/manage-users/student/new')}>
+                                    <FontAwesomeIcon icon={faPlus} /> เพิ่มนักศึกษาใหม่
+                                </button>
+                            </div>
+                            <StudentTable
+                                students={masterData.students}
+                                advisors={masterData.advisors}
+                                onDelete={handleDeleteStudent}
+                            />
+                        </div>
+                    </section>
+                );
             case 'advisors':
-                return <ManageAdvisorsSection 
-                            advisors={masterData.advisors} 
-                            onAddNewAdvisor={handleAddNewAdvisor}
-                            navigate={navigate}
-                            // ✅ 2. ส่งฟังก์ชันลบลงไปเป็น prop
-                            onDeleteAdvisor={handleDeleteAdvisor}
-                        />;
+                 return (
+                    <section>
+                        <h1><FontAwesomeIcon icon={faUserTie} /> จัดการรายชื่ออาจารย์</h1>
+                        <p>เพิ่ม แก้ไข และกำหนดบทบาทของอาจารย์ในระบบ</p>
+                        <div className={styles.tableCard}>
+                            <div className={styles.tableHeader}>
+                                <h2>รายชื่ออาจารย์</h2>
+                                <button className={styles.btnPrimary} onClick={() => navigate('/admin/manage-users/advisor/new')}>
+                                    <FontAwesomeIcon icon={faPlus} /> เพิ่มอาจารย์ใหม่
+                                </button>
+                            </div>
+                            <AdvisorTable
+                                advisors={masterData.advisors}
+                                onDelete={handleDeleteAdvisor}
+                            />
+                        </div>
+                    </section>
+                );
             case 'overview':
             default:
                 return <OverviewSection students={masterData.students} advisors={masterData.advisors} />;
         }
     };
 
-    return (
-        <div>{renderSection()}</div>
-    );
+    return <div>{renderSection()}</div>;
 }
 
-// ... ส่วนของ OverviewSection, ManageStudentsSection, และ ManageAdvisorsSection เหมือนเดิม ...
+const PieChartCard = ({ data, labels }) => {
+    const chartData = {
+        labels: labels,
+        datasets: [{
+            label: ' จำนวน', data: data,
+            backgroundColor: ['#EC4899', '#8B5CF6', '#F59E0B', '#10B981'],
+            borderColor: '#FFFFFF', borderWidth: 2,
+        }],
+    };
+    const options = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+    };
+    return <div className={styles.chartContainer}><Pie data={chartData} options={options} /></div>;
+};
+
 const OverviewSection = ({ students, advisors }) => {
     const masterStudents = students.filter(s => s.degree === 'ปริญญาโท').length;
     const phdStudents = students.filter(s => s.degree === 'ปริญญาเอก').length;
-
     const internalAdvisors = advisors.filter(a => a.type === 'อาจารย์ประจำ').length;
     const externalAdvisors = advisors.filter(a => a.type === 'อาจารย์บัณฑิตพิเศษภายนอก').length;
     const executives = advisors.filter(a => a.type === 'ผู้บริหาร').length;
@@ -181,10 +195,7 @@ const OverviewSection = ({ students, advisors }) => {
                         <div className={styles.statItem}><label>ปริญญาโท</label><span>{masterStudents}</span></div>
                         <div className={styles.statItem}><label>ปริญญาเอก</label><span>{phdStudents}</span></div>
                     </div>
-                    <PieChartCard 
-                        labels={['ปริญญาโท', 'ปริญญาเอก']}
-                        data={[masterStudents, phdStudents]}
-                    />
+                    <PieChartCard labels={['ปริญญาโท', 'ปริญญาเอก']} data={[masterStudents, phdStudents]} />
                 </div>
                 <div className={styles.summaryCard}>
                     <h4><FontAwesomeIcon icon={faUserTie} /> ภาพรวมบุคลากร</h4>
@@ -194,92 +205,10 @@ const OverviewSection = ({ students, advisors }) => {
                         <div className={styles.statItem}><label>อาจารย์ภายนอก</label><span>{externalAdvisors}</span></div>
                         <div className={styles.statItem}><label>ผู้บริหาร</label><span>{executives}</span></div>
                     </div>
-                    <PieChartCard 
-                        labels={['อาจารย์ภายใน', 'อาจารย์ภายนอก', 'ผู้บริหาร']}
-                        data={[internalAdvisors, externalAdvisors, executives]}
-                    />
+                    <PieChartCard labels={['อาจารย์ภายใน', 'อาจารย์ภายนอก', 'ผู้บริหาร']} data={[internalAdvisors, externalAdvisors, executives]} />
                 </div>
             </div>
         </section>
     );
 };
-
-const ManageStudentsSection = ({ students, advisors, navigate }) => {
-    const [filteredStudents, setFilteredStudents] = useState(students);
-    const [filters, setFilters] = useState({ studentId: '', name: '', email: '', advisorId: '' });
-
-    // ใช้ useEffect เพื่ออัปเดต filteredStudents เมื่อ students หลักมีการเปลี่ยนแปลง (เช่น การลบ)
-    useEffect(() => {
-        let data = [...students];
-        if (filters.studentId) data = data.filter(s => s.student_id.includes(filters.studentId));
-        if (filters.name) data = data.filter(s => `${s.first_name_th} ${s.last_name_th}`.toLowerCase().includes(filters.name.toLowerCase()));
-        if (filters.email) data = data.filter(s => s.email.toLowerCase().includes(filters.email.toLowerCase()));
-        if (filters.advisorId) data = data.filter(s => s.main_advisor_id === filters.advisorId);
-        setFilteredStudents(data);
-    }, [filters, students]); // เพิ่ม students ใน dependency array
-
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({...prev, [name]: value }));
-    };
-
-    const resetFilters = () => {
-        setFilters({ studentId: '', name: '', email: '', advisorId: '' });
-    };
-
-    return (
-        <section>
-            <h1><FontAwesomeIcon icon={faUserGraduate} /> จัดการรายชื่อนักศึกษา</h1>
-            <p>เพิ่ม แก้ไข และดูข้อมูลนักศึกษาทั้งหมดในระบบ</p>
-            <div className={styles.tableCard}>
-                <div className={styles.filterCard}>
-                    <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูลนักศึกษา</h3>
-                    <div className={styles.filterGrid}>
-                        <div className={styles.filterGroup}><label htmlFor="studentId">รหัสนักศึกษา</label><input type="text" id="studentId" name="studentId" value={filters.studentId} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
-                        <div className={styles.filterGroup}><label htmlFor="name">ชื่อ-นามสกุล</label><input type="text" id="name" name="name" value={filters.name} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
-                        <div className={styles.filterGroup}><label htmlFor="email">อีเมล</label><input type="text" id="email" name="email" value={filters.email} onChange={handleFilterChange} placeholder="ค้นหา..." /></div>
-                        <div className={styles.filterGroup}><label htmlFor="advisorId">อาจารย์ที่ปรึกษาหลัก</label><select id="advisorId" name="advisorId" value={filters.advisorId} onChange={handleFilterChange}><option value="">ทั้งหมด</option>{advisors?.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`}</option>)}</select></div>
-                    </div>
-                    <div className={styles.filterActions}><button onClick={resetFilters}><FontAwesomeIcon icon={faUndo} /> ล้างการค้นหา</button></div>
-                </div>
-                <div className={styles.tableHeader}>
-                    <h2>รายชื่อนักศึกษา ({filteredStudents.length})</h2>
-                    <button className={styles.btnPrimary} onClick={onAddNewStudent}><FontAwesomeIcon icon={faPlus} /> เพิ่มนักศึกษาใหม่</button>
-                </div>
-                <StudentTable 
-                    students={filteredStudents} 
-                    advisors={advisors} 
-                    onDelete={onDeleteStudent} 
-                />
-            </div>
-        </section>
-    );
-};
-
-const ManageAdvisorsSection = ({ advisors }) => {
-    return (
-        <section>
-            <h1><FontAwesomeIcon icon={faUserTie} /> จัดการรายชื่ออาจารย์</h1>
-            <p>เพิ่ม แก้ไข และกำหนดบทบาทของอาจารย์ในระบบ</p>
-            <div className={styles.tableCard}>
-            <div className={styles.tableCard}>
-                <div className={styles.filterCard}>
-                    <h3><FontAwesomeIcon icon={faFilter} /> ตัวกรองข้อมูล</h3>
-                </div>
-                <div className={styles.tableHeader}>
-                    <h2>รายชื่ออาจารย์ ({filteredAdvisors.length})</h2>
-                    <button className={styles.btnPrimary} onClick={onAddNewAdvisor}><FontAwesomeIcon icon={faPlus} /> เพิ่มอาจารย์ใหม่</button>
-                </div>
-                
-                {/* ✅ 4. ส่งฟังก์ชัน onDelete ต่อไปให้ AdvisorTable */}
-                <AdvisorTable 
-                    advisors={filteredAdvisors} 
-                    navigate={navigate}
-                    onDelete={onDeleteAdvisor}
-                />
-            </div>
-        </section>
-    );
-};
-
 export default ManageUsersPage;

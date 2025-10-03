@@ -22,3 +22,12 @@
   overflow-y: auto; 
   padding: 30px;
 }
+
+.mainContentFullWidth {
+    flex-grow: 1; /* ให้ใช้พื้นที่ที่เหลือทั้งหมด */
+    padding: 20px;
+    background-color: var(--color-background-light); 
+    overflow-y: auto; 
+    /* ✅ ลบ margin-left หรือ grid-column ที่อาจมีใน .mainContent ออกไป */
+    margin-left: 0 !important; /* บังคับให้ไม่มี margin ซ้าย */
+}

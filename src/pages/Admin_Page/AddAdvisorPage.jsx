@@ -9,6 +9,15 @@ import {
     faUserGraduate, faUserTie
 } from '@fortawesome/free-solid-svg-icons';
 
+// --- Helper Function for API Calls ---
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
 // --- Constants for Dropdowns ---
 const THAI_PREFIXES = ['นาย', 'นาง', 'นางสาว', 'อ.', 'ผศ.', 'รศ.', 'ศ.', 'ผศ.ดร.', 'รศ.ดร.', 'ศ.ดร.'];
 const ENG_PREFIXES = ['Mr.', 'Mrs.', 'Ms.', 'Lecturer', 'Asst. Prof.', 'Assoc. Prof.', 'Prof.', 'Asst. Prof. Dr.', 'Assoc. Prof. Dr.', 'Prof. Dr.'];
@@ -19,29 +28,33 @@ const ASSISTANT_DEAN_DEPTS = ["วิชาการและวิจัย", "
 
 // --- State เริ่มต้นสำหรับฟอร์มเปล่า ---
 const INITIAL_ADVISOR_STATE = {
-    advisor_id: '', prefix_th: 'อ.', first_name_th: '', middle_name_th: '', last_name_th: '',
-    prefix_en: 'Lecturer', first_name_en: '', middle_name_en: '', last_name_en: '',
-    email: '', contact_email: '', phone: '', secondary_phone: '', office_location: '',
-    gender: 'ชาย', gender_other: '', type: '', roles: [], assigned_programs: [],
-    password: '', confirm_password: '', academic_works: [], profile_img: null
+    advisor_id: '', prefix_th: 'อ.', first_name_th: '', last_name_th: '',
+    prefix_en: 'Lecturer', first_name_en: '', last_name_en: '',
+    email: '', contact_email: '', phone: '', office_location: '',
+    gender: 'ชาย', type: '', roles: [], assigned_programs: [],
+    password: '', confirm_password: '', academic_works: []
 };
 
 function AddAdvisorPage() {
     const navigate = useNavigate();
     const [advisorData, setAdvisorData] = useState(INITIAL_ADVISOR_STATE);
     const [allPrograms, setAllPrograms] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [activeSection, setActiveSection] = useState('account');
 
     useEffect(() => {
         const fetchPrograms = async () => {
+            setLoading(true);
             try {
-                const res = await fetch('/data/structures/programs.json');
+                const res = await fetch('http://localhost:3000/api/programs', { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('ไม่สามารถโหลดข้อมูลหลักสูตรได้');
                 const data = await res.json();
                 setAllPrograms(data);
             } catch (error) {
-                console.error("Failed to fetch programs", error);
                 alert("เกิดข้อผิดพลาดในการโหลดข้อมูลหลักสูตร");
+            } finally {
+                setLoading(false);
             }
         };
         fetchPrograms();
@@ -72,7 +85,7 @@ function AddAdvisorPage() {
         setAdvisorData(prev => ({...prev, password: password, confirm_password: password}));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!advisorData.advisor_id || !advisorData.email || !advisorData.password || !advisorData.first_name_th || !advisorData.last_name_th) {
             alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน: รหัสอาจารย์, ชื่อ, นามสกุล, อีเมล และรหัสผ่าน');
             setActiveSection('account');
@@ -84,36 +97,37 @@ function AddAdvisorPage() {
             return;
         }
 
-        const allAdvisors = JSON.parse(localStorage.getItem('savedAdvisors') || '[]');
-        const isDuplicate = allAdvisors.some(a => a.advisor_id === advisorData.advisor_id);
-        if (isDuplicate) {
-            alert('มีรหัสอาจารย์นี้ในระบบแล้ว กรุณาใช้รหัสอื่น');
-            return;
+        try {
+            const finalData = { ...advisorData };
+            delete finalData.confirm_password;
+            
+            const response = await fetch('http://localhost:3000/api/advisors', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(finalData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'เกิดข้อผิดพลาดในการสร้างบัญชี');
+            }
+            
+            const result = await response.json();
+            alert(result.message || 'เพิ่มข้อมูลอาจารย์ใหม่สำเร็จ!');
+            navigate('/admin/manage-users');
+
+        } catch (error) {
+            alert(error.message);
         }
-
-        const finalData = { ...advisorData };
-        delete finalData.confirm_password;
-        allAdvisors.push(finalData);
-        localStorage.setItem('savedAdvisors', JSON.stringify(allAdvisors));
-        
-        alert('เพิ่มข้อมูลอาจารย์ใหม่สำเร็จ!');
-        navigate('/admin/manage-users');
     };
 
-    // ✅✅✅ แก้ไข Logic ส่วนจัดการหลักสูตรทั้งหมด ✅✅✅
-    const handleAddProgram = () => {
-        const currentPrograms = advisorData.assigned_programs || [];
-        // เพิ่ม ID ที่เป็นค่าว่างเข้าไปใน Array เพื่อสร้างแถวใหม่
-        handleArrayChange('assigned_programs', [...currentPrograms, '']);
-    };
-    const handleRemoveProgram = (index) => {
-        const updatedPrograms = (advisorData.assigned_programs || []).filter((_, i) => i !== index);
-        handleArrayChange('assigned_programs', updatedPrograms);
-    };
-    const handleProgramChange = (index, newId) => {
-        const updatedPrograms = (advisorData.assigned_programs || []).map((id, i) => i === index ? Number(newId) : id);
-        handleArrayChange('assigned_programs', updatedPrograms);
-    };
+    const handleAddProgram = () => handleArrayChange('assigned_programs', [...(advisorData.assigned_programs || []), '']);
+    const handleRemoveProgram = (index) => handleArrayChange('assigned_programs', (advisorData.assigned_programs || []).filter((_, i) => i !== index));
+    const handleProgramChange = (index, newId) => handleArrayChange('assigned_programs', (advisorData.assigned_programs || []).map((id, i) => i === index ? Number(newId) : id));
+    
+    if (loading) {
+        return <div className={detailStyles.pageContainer}>กำลังโหลดข้อมูล...</div>;
+    }
 
     return (
         <div className={detailStyles.pageLayout}>
@@ -126,19 +140,11 @@ function AddAdvisorPage() {
                     <div className={detailStyles.studentId}>กรุณากรอกข้อมูลให้ครบถ้วน</div>
                 </div>
                 <hr className={detailStyles.divider} />
-                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'account' ? detailStyles.active : ''}`} onClick={() => setActiveSection('account')}>
-                    <FontAwesomeIcon icon={faUserCog} /><span>การจัดการบัญชี</span>
-                </button>
-                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'info' ? detailStyles.active : ''}`} onClick={() => setActiveSection('info')}>
-                    <FontAwesomeIcon icon={faUser} /><span>ข้อมูลทั่วไป</span>
-                </button>
-                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'roles' ? detailStyles.active : ''}`} onClick={() => setActiveSection('roles')}>
-                    <FontAwesomeIcon icon={faSitemap} /><span>บทบาทและหลักสูตร</span>
-                </button>
+                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'account' ? detailStyles.active : ''}`} onClick={() => setActiveSection('account')}><FontAwesomeIcon icon={faUserCog} /><span>การจัดการบัญชี</span></button>
+                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'info' ? detailStyles.active : ''}`} onClick={() => setActiveSection('info')}><FontAwesomeIcon icon={faUser} /><span>ข้อมูลทั่วไป</span></button>
+                <button className={`${detailStyles.sidebarBtn} ${activeSection === 'roles' ? detailStyles.active : ''}`} onClick={() => setActiveSection('roles')}><FontAwesomeIcon icon={faSitemap} /><span>บทบาทและหลักสูตร</span></button>
                 <hr className={detailStyles.divider} />
-                <button className={detailStyles.sidebarBtn} onClick={() => navigate('/admin/manage-users')}>
-                    <FontAwesomeIcon icon={faArrowLeft} /><span>กลับหน้ารายชื่อ</span>
-                </button>
+                <button className={detailStyles.sidebarBtn} onClick={() => navigate('/admin/manage-users')}><FontAwesomeIcon icon={faArrowLeft} /><span>กลับหน้ารายชื่อ</span></button>
             </aside>
 
             <main className={detailStyles.mainContent}>
@@ -169,11 +175,11 @@ function AddAdvisorPage() {
                     <div className={detailStyles.card}>
                         <h3><FontAwesomeIcon icon={faUser} /> ข้อมูลทั่วไป</h3>
                         <div className={detailStyles.cardBody}>
-                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}><div className={detailStyles.formGroup}><label>รหัสอาจารย์</label><input type="text" name="advisor_id" value={advisorData.advisor_id} onChange={handleInputChange} required /></div></div>
-                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}><div className={detailStyles.formGroup}><label>คำนำหน้า/ยศ (ไทย)</label><select name="prefix_th" value={advisorData.prefix_th} onChange={handleInputChange}>{THAI_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select></div><div className={detailStyles.formGroup}><label>ชื่อ (ไทย)</label><input type="text" name="first_name_th" value={advisorData.first_name_th} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>ชื่อกลาง (ไทย)</label><input type="text" name="middle_name_th" value={advisorData.middle_name_th} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>นามสกุล (ไทย)</label><input type="text" name="last_name_th" value={advisorData.last_name_th} onChange={handleInputChange} /></div></div>
-                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}><div className={detailStyles.formGroup}><label>คำนำหน้า (อังกฤษ)</label><select name="prefix_en" value={advisorData.prefix_en} onChange={handleInputChange}>{ENG_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select></div><div className={detailStyles.formGroup}><label>First Name (อังกฤษ)</label><input type="text" name="first_name_en" value={advisorData.first_name_en} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>Middle Name (อังกฤษ)</label><input type="text" name="middle_name_en" value={advisorData.middle_name_en} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>Last Name (อังกฤษ)</label><input type="text" name="last_name_en" value={advisorData.last_name_en} onChange={handleInputChange} /></div></div>
-                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}><div className={detailStyles.formGroup}><label>อีเมลสำหรับติดต่อ</label><input type="email" name="contact_email" value={advisorData.contact_email} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>เบอร์โทรศัพท์หลัก</label><input type="tel" name="phone" value={advisorData.phone} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>เบอร์โทรศัพท์สำรอง</label><input type="text" name="secondary_phone" value={advisorData.secondary_phone} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>ห้อง/สถานที่ทำงาน</label><input type="text" name="office_location" value={advisorData.office_location} onChange={handleInputChange} /></div></div>
-                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>เพศ</label><select name="gender" value={advisorData.gender} onChange={handleInputChange}>{GENDERS.map(g=><option key={g} value={g}>{g}</option>)}</select>{advisorData.gender === 'อื่นๆ' && (<input type="text" name="gender_other" value={advisorData.gender_other} onChange={handleInputChange} placeholder="โปรดระบุ" style={{marginTop:'10px'}}/>)}</div></div>
+                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>รหัสอาจารย์</label><input type="text" name="advisor_id" value={advisorData.advisor_id} onChange={handleInputChange} required /></div></div>
+                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>คำนำหน้า/ยศ (ไทย)</label><select name="prefix_th" value={advisorData.prefix_th} onChange={handleInputChange}>{THAI_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select></div><div className={detailStyles.formGroup}><label>ชื่อ (ไทย)</label><input type="text" name="first_name_th" value={advisorData.first_name_th} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>นามสกุล (ไทย)</label><input type="text" name="last_name_th" value={advisorData.last_name_th} onChange={handleInputChange} /></div></div>
+                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>คำนำหน้า (อังกฤษ)</label><select name="prefix_en" value={advisorData.prefix_en} onChange={handleInputChange}>{ENG_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select></div><div className={detailStyles.formGroup}><label>First Name (อังกฤษ)</label><input type="text" name="first_name_en" value={advisorData.first_name_en} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>Last Name (อังกฤษ)</label><input type="text" name="last_name_en" value={advisorData.last_name_en} onChange={handleInputChange} /></div></div>
+                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>อีเมลสำหรับติดต่อ</label><input type="email" name="contact_email" value={advisorData.contact_email} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>เบอร์โทรศัพท์หลัก</label><input type="tel" name="phone" value={advisorData.phone} onChange={handleInputChange} /></div><div className={detailStyles.formGroup}><label>ห้อง/สถานที่ทำงาน</label><input type="text" name="office_location" value={advisorData.office_location} onChange={handleInputChange} /></div></div>
+                            <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}><div className={detailStyles.formGroup}><label>เพศ</label><select name="gender" value={advisorData.gender} onChange={handleInputChange}>{GENDERS.map(g=><option key={g} value={g}>{g}</option>)}</select></div></div>
                         </div>
                     </div>
                 )}
@@ -191,7 +197,6 @@ function AddAdvisorPage() {
                                 </div>
                             </div>
                         </div>
-
                         <div className={detailStyles.card}>
                             <h3><FontAwesomeIcon icon={faSitemap} /> บทบาทหน้าที่</h3>
                             <div className={detailStyles.cardBody}>
@@ -218,7 +223,6 @@ function AddAdvisorPage() {
                                 )}
                             </div>
                         </div>
-
                         <div className={detailStyles.card}>
                             <h3><FontAwesomeIcon icon={faUserGraduate} /> หลักสูตรที่ได้รับมอบหมาย</h3>
                             <div className={detailStyles.cardBody}>
@@ -227,7 +231,7 @@ function AddAdvisorPage() {
                                         <select value={programId} onChange={e => handleProgramChange(index, e.target.value)}>
                                             <option value="">-- เลือกหลักสูตร --</option>
                                             {allPrograms.map(p => (
-                                                <option key={p.id} value={p.id}>({p.degreeLevel}) {p.name}</option>
+                                                <option key={p.id} value={p.id}>({p.degree}) {p.name}</option>
                                             ))}
                                         </select>
                                         <button type="button" className={detailStyles.removeBtn} onClick={() => handleRemoveProgram(index)}>

@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import styles from './ManageUsersPage.module.css'; // ใช้สไตล์ร่วมกัน
-import detailStyles from './ManageAdvisorDetailPage.module.css'; // ใช้สไตล์จากหน้ารายละเอียดอาจารย์
+import styles from './ManageUsersPage.module.css';
+import detailStyles from './ManageAdvisorDetailPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-    faUserCog, faUser, faSitemap, faUserGraduate, faFileAlt, 
+import {
+    faUserCog, faUser, faSitemap, faUserGraduate, faFileAlt,
     faArrowLeft, faSave, faPlus, faTrashAlt, faEye, faEyeSlash, faSyncAlt,
     faUserTie,
-    faPencilAlt, // 👈 เพิ่มไอคอน "แก้ไข"
-    faTimes // 👈 เพิ่มไอคอน "ยกเลิก"
+    faPencilAlt,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import _ from 'lodash';
 import AdviseeTable from '../../components/admin/AdviseeTable';
@@ -18,8 +18,9 @@ const THAI_PREFIXES = ['นาย', 'นาง', 'นางสาว', 'อ.', '
 const ENG_PREFIXES = ['Mr.', 'Mrs.', 'Ms.', 'Lecturer', 'Asst. Prof.', 'Assoc. Prof.', 'Prof.', 'Asst. Prof. Dr.', 'Assoc. Prof. Dr.', 'Prof. Dr.'];
 const GENDERS = ['ชาย', 'หญิง', 'อื่นๆ'];
 const ADVISOR_TYPES = ["อาจารย์ประจำ", "อาจารย์ประจำหลักสูตร", "อาจารย์ผู้รับผิดชอบหลักสูตร", "อาจารย์บัณฑิตพิเศษภายใน", "อาจารย์บัณฑิตพิเศษภายนอก", "ผู้บริหาร"];
-const ADVISOR_ROLES = ["สอน", "สอบ", "ที่ปรึกษาวิทยานิพนธ์", "ที่ปรึกษาวิทยานิพนธ์ร่วม", "คณบดี", "ผู้ช่วยคณบดี"];
+const ADVISOR_ROLES = ["สอน", "สอบ", "ที่ปรึกษาวิทยานิพนธ์", "ที่ปรึกษาวิทยานิพนธ์ร่วม", "ประธานสอบ", "คณบดี", "ผู้ช่วยคณบดี"];
 const ASSISTANT_DEAN_DEPTS = ["วิชาการและวิจัย", "พัฒนานักศึกษา", "บริหาร"];
+
 
 // --- Sub-Components for each section ---
 
@@ -27,11 +28,8 @@ const Sidebar = ({ advisor, activeSection, setActiveSection, onBack }) => (
     <aside className={detailStyles.sidebar}>
         <div className={detailStyles.studentProfileCard}>
             <div className={detailStyles.profileImageContainer}>
-                {advisor.profile_img ? (
-                    <img src={advisor.profile_img} alt="Advisor Profile" className={detailStyles.profileImage} />
-                ) : (
-                    <div className={detailStyles.noImagePlaceholder}>ไม่มีภาพ</div>
-                )}
+                {/* 🎯 FIX: เปลี่ยนจากรูปภาพเป็นไอคอน */}
+                <FontAwesomeIcon icon={faUserTie} className={detailStyles.profileIcon} />
             </div>
             <div className={detailStyles.studentName}>{advisor.prefix_th}{advisor.first_name_th} {advisor.last_name_th}</div>
             <div className={detailStyles.studentEmail}>{advisor.email}</div>
@@ -160,19 +158,16 @@ const InfoSection = ({ data, onInputChange }) => (
             <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}>
                 <div className={detailStyles.formGroup}><label>คำนำหน้า/ยศ (ไทย)</label><select name="prefix_th" value={data.prefix_th || ''} onChange={onInputChange}>{THAI_PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                 <div className={detailStyles.formGroup}><label>ชื่อ (ไทย)</label><input type="text" name="first_name_th" value={data.first_name_th || ''} onChange={onInputChange} /></div>
-                <div className={detailStyles.formGroup}><label>ชื่อกลาง (ไทย)</label><input type="text" name="middle_name_th" value={data.middle_name_th || ''} onChange={onInputChange} /></div>
                 <div className={detailStyles.formGroup}><label>นามสกุล (ไทย)</label><input type="text" name="last_name_th" value={data.last_name_th || ''} onChange={onInputChange} /></div>
             </div>
             <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}>
                 <div className={detailStyles.formGroup}><label>คำนำหน้า (อังกฤษ)</label><select name="prefix_en" value={data.prefix_en || ''} onChange={onInputChange}>{ENG_PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                 <div className={detailStyles.formGroup}><label>First Name (อังกฤษ)</label><input type="text" name="first_name_en" value={data.first_name_en || ''} onChange={onInputChange} /></div>
-                <div className={detailStyles.formGroup}><label>Middle Name (อังกฤษ)</label><input type="text" name="middle_name_en" value={data.middle_name_en || ''} onChange={onInputChange} /></div>
                 <div className={detailStyles.formGroup}><label>Last Name (อังกฤษ)</label><input type="text" name="last_name_en" value={data.last_name_en || ''} onChange={onInputChange} /></div>
             </div>
             <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`} style={{ marginBottom: '25px' }}>
                 <div className={detailStyles.formGroup}><label>อีเมลสำหรับติดต่อ</label><input type="email" name="contact_email" value={data.contact_email || ''} onChange={onInputChange} /></div>
                 <div className={detailStyles.formGroup}><label>เบอร์โทรศัพท์หลัก</label><input type="tel" name="phone" value={data.phone || ''} onChange={onInputChange} /></div>
-                <div className={detailStyles.formGroup}><label>เบอร์โทรศัพท์สำรอง</label><input type="tel" name="secondary_phone" value={data.secondary_phone || ''} onChange={onInputChange} /></div>
                 <div className={detailStyles.formGroup}><label>ห้อง/สถานที่ทำงาน</label><input type="text" name="office_location" value={data.office_location || ''} onChange={onInputChange} /></div>
             </div>
             <div className={`${detailStyles.formGrid} ${detailStyles.fourCols}`}>
@@ -182,60 +177,53 @@ const InfoSection = ({ data, onInputChange }) => (
                         {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                     
-                    {/* ✅✅✅ เพิ่มเงื่อนไขและ input นี้เข้าไป ✅✅✅ */}
                     {data.gender === 'อื่นๆ' && (
                         <input
                             type="text"
-                            name="gender_other" // ชื่อ state ที่เราเพิ่มเข้าไป
+                            name="gender_other"
                             value={data.gender_other || ''}
                             onChange={onInputChange}
                             placeholder="โปรดระบุ"
-                            style={{ marginTop: '10px' }} // เพิ่มระยะห่างด้านบน
+                            style={{ marginTop: '10px' }}
                         />
                     )}
                 </div>
             </div>
-
         </div>
     </div>
 );
 
-// ✅✅✅ แก้ไข RolesSection ทั้งหมดตามนี้ ✅✅✅
 const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
-    // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงของ Checkbox
     const handleRoleChange = (e) => {
         const { name, checked } = e.target;
-        const currentRoles = data.roles || [];
+        const currentRoles = Array.isArray(data.roles) ? data.roles : [];
         const updatedRoles = checked
             ? [...currentRoles, name]
             : currentRoles.filter(role => role !== name);
         onArrayChange('roles', updatedRoles);
     };
 
-    // ฟังก์ชันสำหรับเพิ่มแถวหลักสูตร
     const handleAddProgram = () => {
-        const currentPrograms = data.assigned_programs || [];
-        // ✅ เพิ่ม ID ว่างๆ เข้าไปใน Array
+        const currentPrograms = Array.isArray(data.assigned_programs) ? data.assigned_programs : [];
         onArrayChange('assigned_programs', [...currentPrograms, '']); 
     };
 
-    // ฟังก์ชันสำหรับลบแถวหลักสูตร
     const handleRemoveProgram = (index) => {
-        const updatedPrograms = (data.assigned_programs || []).filter((_, i) => i !== index);
+        const currentPrograms = Array.isArray(data.assigned_programs) ? data.assigned_programs : [];
+        const updatedPrograms = currentPrograms.filter((_, i) => i !== index);
         onArrayChange('assigned_programs', updatedPrograms);
     };
     
-    // ฟังก์ชันสำหรับอัปเดตค่าในแถวหลักสูตร
     const handleProgramChange = (index, newProgramId) => {
-        const updatedPrograms = (data.assigned_programs || []).map((programId, i) => 
-            i === index ? Number(newProgramId) : programId // ✅ เปลี่ยนค่าใน Array ตาม index
+        const currentPrograms = Array.isArray(data.assigned_programs) ? data.assigned_programs : [];
+        const updatedPrograms = currentPrograms.map((programId, i) => 
+            i === index ? Number(newProgramId) : programId
         );
         onArrayChange('assigned_programs', updatedPrograms);
     };
 
     return (
         <>
-            {/* --- Card 1: ประเภทของอาจารย์ --- */}
             <div className={detailStyles.card}>
                 <h3><FontAwesomeIcon icon={faUserTie} /> ประเภทของอาจารย์</h3>
                 <div className={detailStyles.cardBody}>
@@ -248,7 +236,6 @@ const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
                 </div>
             </div>
 
-            {/* --- Card 2: บทบาทหน้าที่ --- */}
             <div className={detailStyles.card}>
                 <h3><FontAwesomeIcon icon={faSitemap} /> บทบาทหน้าที่</h3>
                 <div className={detailStyles.cardBody}>
@@ -259,7 +246,7 @@ const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
                                     <input
                                         type="checkbox"
                                         name={role}
-                                        checked={(data.roles || []).includes(role)}
+                                        checked={Array.isArray(data.roles) && data.roles.includes(role)}
                                         onChange={handleRoleChange}
                                     />
                                     <span className={detailStyles.checkmark}></span> {role}
@@ -267,7 +254,7 @@ const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
                             </div>
                         ))}
                     </div>
-                    {(data.roles || []).includes('ผู้ช่วยคณบดี') && (
+                    {Array.isArray(data.roles) && data.roles.includes('ผู้ช่วยคณบดี') && (
                         <div className={`${detailStyles.formGrid} ${detailStyles.oneCol}`} style={{marginTop: '15px'}}>
                             <div className={detailStyles.formGroup}>
                                 <label>ฝ่ายสำหรับผู้ช่วยคณบดี</label>
@@ -281,19 +268,16 @@ const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
                 </div>
             </div>
 
-            {/* --- Card 3: หลักสูตรที่ได้รับมอบหมาย --- */}
             <div className={detailStyles.card}>
                 <h3><FontAwesomeIcon icon={faUserGraduate} /> หลักสูตรที่ได้รับมอบหมาย</h3>
                 <div className={detailStyles.cardBody}>
-                    {(data.assigned_programs || []).map((programId, index) => (
+                    {Array.isArray(data.assigned_programs) && data.assigned_programs.map((programId, index) => (
                         <div key={index} className={detailStyles.programItem}>
-                            {/* ✅ แก้ไข value ให้ตรงกับ programId ที่เป็น Number */}
                             <select value={programId} onChange={e => handleProgramChange(index, e.target.value)}>
                                 <option value="">-- เลือกหลักสูตร --</option>
-                                {/* ✅ แก้ไข Key ให้ตรงกับข้อมูลใน programs.json */}
                                 {allPrograms.map(p => (
                                     <option key={p.id} value={p.id}>
-                                        ({p.degreeLevel}) {p.name}
+                                       ({p.degree_level}) {p.name}
                                     </option>
                                 ))}
                             </select>
@@ -311,56 +295,33 @@ const RolesSection = ({ data, onInputChange, onArrayChange, allPrograms }) => {
     );
 };
 
-// ✅✅✅ โค้ดทั้งหมดสำหรับ AdviseesSection ✅✅✅
-const AdviseesSection = ({ advisorId, allStudents }) => {
-
-    // ใช้ useMemo เพื่อกรองรายชื่อนักศึกษาอย่างมีประสิทธิภาพ
-    const advisees = useMemo(() => {
-        // ตรวจสอบก่อนว่า allStudents เป็น array ที่พร้อมใช้งาน
-        if (!allStudents || !Array.isArray(allStudents)) {
-            return [];
-        }
-
-        // กรองนักศึกษาโดยเช็คจาก id ของอาจารย์ที่ปรึกษาหลักและที่ปรึกษาร่วม
-        return allStudents.filter(student => 
-            student.main_advisor_id === advisorId || 
-            student.co_advisor1_id === advisorId || 
-            student.co_advisor2_id === advisorId
-        );
-    }, [advisorId, allStudents]); // ฟังก์ชันนี้จะทำงานใหม่เมื่อค่าเหล่านี้เปลี่ยนไปเท่านั้น
-
+const AdviseesSection = ({ advisorId, advisees }) => {
     return (
         <div className={detailStyles.card}>
             <h3>
-                <FontAwesomeIcon icon={faUserGraduate} /> นักศึกษาในที่ปรึกษา ({advisees.length})
+                <FontAwesomeIcon icon={faUserGraduate} /> นักศึกษาในที่ปรึกษา ({(advisees || []).length})
             </h3>
             <div className={detailStyles.cardBody}>
-                {/* ส่งข้อมูลนักศึกษาที่กรองแล้ว (advisees) และ advisorId 
-                  ไปยัง AdviseeTable เพื่อแสดงผล
-                */}
                 <AdviseeTable students={advisees} advisorId={advisorId} />
             </div>
         </div>
     );
 };
 
-// ✅✅✅ โค้ดทั้งหมดสำหรับ PublicationsSection ✅✅✅
 const PublicationsSection = ({ data, onArrayChange }) => {
-    // State สำหรับควบคุม UI การเพิ่มและแก้ไข
     const [isAdding, setIsAdding] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
-    
-    // State สำหรับเก็บข้อมูลที่กำลังเพิ่มหรือแก้ไข
     const [formData, setFormData] = useState({ title: '', publish_date: '', publication_type: '', attachment_file: '' });
+
+    const academicWorks = Array.isArray(data.academic_works) ? data.academic_works : [];
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // --- ฟังก์ชันจัดการการเพิ่มข้อมูล ---
     const handleAddNew = () => {
-        setFormData({ title: '', publish_date: '', publication_type: '', attachment_file: '' }); // รีเซ็ตฟอร์ม
+        setFormData({ title: '', publish_date: '', publication_type: '', attachment_file: '' });
         setIsAdding(true);
     };
 
@@ -373,15 +334,13 @@ const PublicationsSection = ({ data, onArrayChange }) => {
             alert('กรุณากรอกชื่อผลงาน');
             return;
         }
-        const currentWorks = data.academic_works || [];
-        onArrayChange('academic_works', [...currentWorks, formData]);
+        onArrayChange('academic_works', [...academicWorks, formData]);
         setIsAdding(false);
     };
 
-    // --- ฟังก์ชันจัดการการแก้ไขข้อมูล ---
     const handleEdit = (work, index) => {
         setEditingIndex(index);
-        setFormData(work); // นำข้อมูลเดิมมาใส่ในฟอร์ม
+        setFormData(work);
     };
 
     const handleCancelEdit = () => {
@@ -393,17 +352,16 @@ const PublicationsSection = ({ data, onArrayChange }) => {
             alert('กรุณากรอกชื่อผลงาน');
             return;
         }
-        const updatedWorks = (data.academic_works || []).map((work, i) => 
+        const updatedWorks = academicWorks.map((work, i) => 
             i === index ? formData : work
         );
         onArrayChange('academic_works', updatedWorks);
         setEditingIndex(null);
     };
 
-    // --- ฟังก์ชันจัดการการลบข้อมูล ---
     const handleDelete = (indexToDelete) => {
         if (window.confirm('คุณต้องการลบผลงานนี้ใช่หรือไม่?')) {
-            const updatedWorks = (data.academic_works || []).filter((_, index) => index !== indexToDelete);
+            const updatedWorks = academicWorks.filter((_, index) => index !== indexToDelete);
             onArrayChange('academic_works', updatedWorks);
         }
     };
@@ -430,7 +388,6 @@ const PublicationsSection = ({ data, onArrayChange }) => {
                         <thead>
                             <tr>
                                 <th>ชื่อผลงาน</th>
-                                {/* ✅ เพิ่ม className ให้กับหัวข้อที่ต้องการ */}
                                 <th className={detailStyles.textCenter}>วันที่ตีพิมพ์</th>
                                 <th className={detailStyles.textCenter}>ลักษณะการตีพิมพ์</th>
                                 <th className={detailStyles.textCenter}>ไฟล์แนบ</th>
@@ -438,13 +395,12 @@ const PublicationsSection = ({ data, onArrayChange }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {(data.academic_works || []).map((work, index) => 
+                            {academicWorks.map((work, index) => 
                                 editingIndex === index ? (
                                     renderFormRow(() => handleSaveEdit(index), handleCancelEdit)
                                 ) : (
                                     <tr key={index}>
                                         <td>{work.title}</td>
-                                        {/* ✅ เพิ่ม className ให้กับเนื้อหาที่ต้องการ */}
                                         <td className={detailStyles.textCenter}>{work.publish_date}</td>
                                         <td className={detailStyles.textCenter}>{work.publication_type}</td>
                                         <td className={detailStyles.textCenter}>
@@ -466,7 +422,7 @@ const PublicationsSection = ({ data, onArrayChange }) => {
                                 )
                             )}
                             {isAdding && renderFormRow(handleSaveNew, handleCancelAdd)}
-                            {(data.academic_works || []).length === 0 && !isAdding && (
+                            {academicWorks.length === 0 && !isAdding && (
                                 <tr>
                                     <td colSpan="5" className={detailStyles.noDataRow}>ยังไม่มีผลงานตีพิมพ์</td>
                                 </tr>
@@ -492,51 +448,45 @@ function ManageAdvisorDetailPage() {
     const [activeSection, setActiveSection] = useState('account');
     const [advisorData, setAdvisorData] = useState(null);
     const [originalData, setOriginalData] = useState(null);
-    const [relatedData, setRelatedData] = useState({ allStudents: [], allPrograms: [] });
+    const [relatedData, setRelatedData] = useState({ advisees: [], allPrograms: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // ✅ 1. เพิ่ม State สำหรับตรวจสอบการเปลี่ยนแปลง
     const [isDirty, setIsDirty] = useState(false);
 
- // ✅✅✅ แก้ไข useEffect นี้ทั้งหมด ✅✅✅
     useEffect(() => {
         const fetchData = async () => {
+            const token = localStorage.getItem('token'); 
             try {
-                const [advisorsRes, studentsRes, programsRes] = await Promise.all([
-                    fetch('/data/advisor.json'),
-                    fetch('/data/student.json'),
-                    fetch('/data/structures/programs.json') 
+                const [advisorsRes, programsRes, adviseesRes] = await Promise.all([
+                    fetch('/api/advisors', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/programs', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`/api/advisors/${advisorId}/advisees`, { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
 
-                if (!advisorsRes.ok || !studentsRes.ok || !programsRes.ok) {
-                    throw new Error('ไม่สามารถโหลดข้อมูลพื้นฐานได้');
+                if (!advisorsRes.ok || !programsRes.ok || !adviseesRes.ok) {
+                    throw new Error('ไม่สามารถโหลดข้อมูลที่จำเป็นได้');
                 }
 
-                const advisorsFromFile = await advisorsRes.json();
-                const allStudents = await studentsRes.json();
+                const allAdvisors = await advisorsRes.json();
                 const allPrograms = await programsRes.json();
-
-                // 1. อ่านข้อมูลทั้งหมดจาก Local Storage (ถ้ามี)
-                const savedAdvisors = JSON.parse(localStorage.getItem('savedAdvisors'));
-
-                // 2. หาข้อมูลอาจารย์คนปัจจุบัน
-                let currentAdvisor;
-                if (savedAdvisors) {
-                    // ถ้ามีข้อมูลใน Storage, ให้หาจากใน Storage ก่อน
-                    currentAdvisor = savedAdvisors.find(a => a.advisor_id === advisorId);
-                }
+                const advisees = await adviseesRes.json();
                 
-                if (!currentAdvisor) {
-                    // ถ้าไม่เจอใน Storage (หรือไม่มี Storage), ให้หาจากไฟล์
-                    currentAdvisor = advisorsFromFile.find(a => a.advisor_id === advisorId);
-                }
+                const currentAdvisor = allAdvisors.find(a => a.advisor_id === advisorId);
 
                 if (!currentAdvisor) {
                     throw new Error("ไม่พบข้อมูลอาจารย์");
                 }
+                
+                if (currentAdvisor.assigned_programs && typeof currentAdvisor.assigned_programs === 'string') {
+                    currentAdvisor.assigned_programs = JSON.parse(currentAdvisor.assigned_programs);
+                }
+                if (currentAdvisor.roles && typeof currentAdvisor.roles === 'string') {
+                    currentAdvisor.roles = JSON.parse(currentAdvisor.roles);
+                }
+                if (currentAdvisor.academic_works && typeof currentAdvisor.academic_works === 'string') {
+                    currentAdvisor.academic_works = JSON.parse(currentAdvisor.academic_works);
+                }
 
-                // 3. ตั้งค่าข้อมูลเริ่มต้นเหมือนเดิม
                 const advisorWithDefaults = {
                     ...currentAdvisor,
                     roles: currentAdvisor.roles || [],
@@ -544,14 +494,15 @@ function ManageAdvisorDetailPage() {
                     academic_works: currentAdvisor.academic_works || [],
                     password: '',
                     confirm_password: '',
-                    gender_other: currentAdvisor.gender_other || '' // ✅ เพิ่มบรรทัดนี้
+                    gender_other: currentAdvisor.gender_other || ''
                 };
                 
                 setAdvisorData(advisorWithDefaults);
                 setOriginalData(_.cloneDeep(advisorWithDefaults));
-                setRelatedData({ allStudents, allPrograms });
+                setRelatedData({ allPrograms, advisees });
 
             } catch (err) {
+                console.error("Fetch Data Error:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -560,33 +511,25 @@ function ManageAdvisorDetailPage() {
         fetchData();
     }, [advisorId]);
 
-    // ✅ 2. เพิ่ม useEffect สำหรับเปรียบเทียบข้อมูล
     useEffect(() => {
         if (originalData && advisorData) {
-            // ใช้ lodash ในการเปรียบเทียบ object/array ที่ซับซ้อน
             const hasChanges = !_.isEqual(originalData, advisorData);
             setIsDirty(hasChanges);
         }
     }, [advisorData, originalData]);
 
-    // ✅ 3. เพิ่ม useEffect สำหรับดักจับการปิดหน้า/รีเฟรช
     useEffect(() => {
         const handleBeforeUnload = (event) => {
             if (isDirty) {
                 event.preventDefault();
-                // Browser ส่วนใหญ่จะไม่แสดงข้อความที่เรากำหนด แต่จะใช้ข้อความมาตรฐานแทน
                 event.returnValue = ''; 
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-
-        // Cleanup function: ลบ event listener ออกเมื่อ component ถูก unmount
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [isDirty]); // ให้ effect นี้ทำงานใหม่เมื่อ isDirty เปลี่ยนแปลง
-
+    }, [isDirty]);
 
     const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
@@ -597,28 +540,41 @@ function ManageAdvisorDetailPage() {
         setAdvisorData(prev => ({ ...prev, [fieldName]: newArray }));
     }, []);
 
-    const handleSave = () => {
-        console.log("Saving data:", advisorData);
-        
-        let allAdvisors = JSON.parse(localStorage.getItem('savedAdvisors') || '[]');
-        const index = allAdvisors.findIndex(a => a.advisor_id === advisorId);
-
-        if (index > -1) {
-            allAdvisors[index] = advisorData;
-        } else {
-            allAdvisors.push(advisorData);
+    const handleSave = async () => {
+        if (advisorData.password && advisorData.password !== advisorData.confirm_password) {
+            alert("รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน");
+            return;
         }
 
-        localStorage.setItem('savedAdvisors', JSON.stringify(allAdvisors));
-        
-        // ✅ 4. อัปเดต originalData และ isDirty หลังบันทึก
-        setOriginalData(_.cloneDeep(advisorData)); 
-        setIsDirty(false); // ตั้งค่ากลับเป็น false เพราะบันทึกแล้ว
-        
-        alert("บันทึกข้อมูลอาจารย์สำเร็จ");
+        const token = localStorage.getItem('token');
+
+        try {
+            const response = await fetch(`/api/advisors/${advisorId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(advisorData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            }
+            
+            const savedData = await response.json();
+            alert(savedData.message || "บันทึกข้อมูลอาจารย์สำเร็จ");
+
+            setOriginalData(_.cloneDeep(advisorData));
+            setIsDirty(false);
+
+        } catch (error) {
+            console.error("Save Error:", error);
+            alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        }
     };
     
-    // ✅ 5. สร้างฟังก์ชันใหม่สำหรับจัดการการนำทาง
     const handleNavigation = (path) => {
         if (isDirty) {
             if (window.confirm("คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?")) {
@@ -635,7 +591,7 @@ function ManageAdvisorDetailPage() {
             case 'account': return <AccountSection data={advisorData} onInputChange={handleInputChange} />;
             case 'info': return <InfoSection data={advisorData} onInputChange={handleInputChange} />;
             case 'roles': return <RolesSection data={advisorData} onArrayChange={handleArrayChange} onInputChange={handleInputChange} allPrograms={relatedData.allPrograms} />;
-            case 'advisees': return <AdviseesSection advisorId={advisorId} allStudents={relatedData.allStudents} />;
+            case 'advisees': return <AdviseesSection advisorId={advisorId} advisees={relatedData.advisees} />;
             case 'publications': return <PublicationsSection data={advisorData} onArrayChange={handleArrayChange} />;
             default: return <AccountSection data={advisorData} onInputChange={handleInputChange} />;
         }
@@ -647,7 +603,6 @@ function ManageAdvisorDetailPage() {
 
     return (
         <div className={detailStyles.pageLayout}>
-            {/* ✅ 6. เปลี่ยน onClick ของปุ่ม Back ให้ใช้ handleNavigation */}
             <Sidebar 
                 advisor={advisorData} 
                 activeSection={activeSection} 
@@ -657,7 +612,6 @@ function ManageAdvisorDetailPage() {
             <main className={detailStyles.mainContent}>
                 <div className={detailStyles.contentHeader}>
                     <h1><FontAwesomeIcon icon={faUserTie} /> จัดการข้อมูลอาจารย์</h1>
-                    {/* ✅ 7. (ทางเลือก) ทำให้ปุ่มบันทึกกดไม่ได้ถ้าไม่มีการเปลี่ยนแปลง */}
                     <button 
                         className={styles.btnPrimary} 
                         onClick={handleSave}

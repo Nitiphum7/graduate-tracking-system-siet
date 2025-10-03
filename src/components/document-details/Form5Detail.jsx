@@ -18,7 +18,7 @@ function Form5Detail({ doc, user }) {
         <>
             <h4><FontAwesomeIcon icon={faUserGraduate} /> ข้อมูลผู้ยื่นคำร้อง</h4>
             <ul className={styles.infoList}>
-                <li><label>ชื่อ-นามสกุล:</label> <span>{user.fullname}</span></li>
+                <li><label>ชื่อ-นามสกุล:</label> <span>{`${user.prefix_th} ${user.first_name_th} ${user.last_name_th}`}</span></li>
                 <li><label>รหัสนักศึกษา:</label> <span>{user.student_id}</span></li>
                 <li><label>หลักสูตร:</label> <span>{user.program_name || '-'}</span></li>
                 <li><label>อีเมล:</label> <span>{user.email}</span></li>
