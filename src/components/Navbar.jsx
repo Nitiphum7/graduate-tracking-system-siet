@@ -66,7 +66,7 @@ function Navbar() {
                          <li><NavLink to={`/${user.role_name}/home`} className={({ isActive }) => isActive ? styles.active : ''}><FontAwesomeIcon icon={faHome} /> หน้าหลัก</NavLink></li>
                         {user.role_name === 'advisor' && (
                             <li><NavLink to="/advisor/my-roles" className={({ isActive }) => isActive ? styles.active : ''}>
-                                    <FontAwesomeIcon icon={faUsersCog} /> บทบาทของฉัน
+                                    <FontAwesomeIcon icon={faUsersCog} /> บทบาท
                                 </NavLink>
                             </li>
                         )}

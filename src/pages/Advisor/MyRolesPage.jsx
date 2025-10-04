@@ -72,7 +72,7 @@ const MyRolesPage = () => {
     return (
         <div className={styles.dashboardContainer}>
             <header className={styles.header}>
-                <h1><FaUsers /> บทบาททั้งหมดของฉัน</h1>
+                <h1><FaUsers /> บทบาทของเอกสาร</h1>
                 <p>ภาพรวมความสัมพันธ์ทั้งหมดที่คุณมีต่อนักศึกษาในระบบ</p>
             </header>
 
@@ -83,7 +83,7 @@ const MyRolesPage = () => {
                         <tr>
                             <th>นักศึกษา</th>
                             <th>หลักสูตร</th>
-                            <th>บทบาทของคุณ</th>
+                            <th>บทบาท</th>
                             <th>เกี่ยวข้องกับเอกสาร</th>
                         </tr>
                     </thead>
