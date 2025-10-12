@@ -14,14 +14,14 @@ function AdminWorkflowCard({ document, onAction }) {
         PENDING_EXTERNAL_PROFESSOR: "รออาจารย์ภายนอกอนุมัติ",
         PENDING_EXAM_COMMITTEE: "รอคณะกรรมการสอบอนุมัติ",
         PENDING_EXAM_CHAIR: "รอประธานกรรมการสอบอนุมัติ",
-        PENDING_RECTOR: "รออธิการบดีอนุมัติ",
+        PENDING_RECTOR: "รอคณบดีอนุมัติ",
         PENDING_MAIN_ADVISOR: "รออาจารย์ที่ปรึกษาหลักอนุมัติ",
         PENDING_ADVISORS_3: "รออาจารย์ที่ปรึกษา (3 ท่าน) อนุมัติ",
         PENDING_STAFF_CONFIRM: "รอเจ้าหน้าที่ยืนยัน",
         PENDING_INTERNAL_RESERVE: "รออาจารย์สำรองภายในอนุมัติ",
         PENDING_EXTERNAL_RESERVE: "รออาจารย์สำรองภายนอกอนุมัติ",
         PENDING_PROGRAM_CHAIR: "รอประธานหลักสูตรอนุมัติ",
-        PENDING_ASSISTANT_RECTOR: "รอผู้ช่วยอธิการบดีอนุมัติ",
+        PENDING_ASSISTANT_RECTOR: "รอผู้ช่วยคณบดีอนุมัติ",
     };
 
     const renderTimelineSteps = () => {
@@ -126,7 +126,6 @@ function AdminWorkflowCard({ document, onAction }) {
         });
     };
 
-    // --- ✅✅✅ ส่วนสำคัญที่แก้ไข Logic ทั้งหมด ✅✅✅ ---
     const renderActions = () => {
         const currentStatus = document.status;
         const s = STATUS_ENUM;

@@ -115,7 +115,7 @@ function MyTasksPage() {
                                     <th>ชื่อเอกสาร</th>
                                     <th>ชื่อนักศึกษา</th>
                                     <th>วันที่ส่ง</th>
-                                    <th>ดำเนินการ</th>
+                                    <th>อนุมัติ/ส่งกลับแก้ไข</th>
                                 </tr>
                             </thead>
                             <tbody>

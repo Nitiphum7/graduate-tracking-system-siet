@@ -12,7 +12,6 @@ api.interceptors.request.use(
     // ดึง token จาก localStorage
     const token = localStorage.getItem('token');
     
-    // ถ้ามี token ให้เพิ่ม Authorization header เข้าไป
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
