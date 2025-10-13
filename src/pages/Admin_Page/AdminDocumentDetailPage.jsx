@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import styles from '../User_Page/DocumentDetailPage.module.css'; // ใช้ CSS ร่วมกัน
+import styles from '../User_Page/DocumentDetailPage.module.css'; 
 import { useAuth } from '../../hooks/useAuth.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHistory } from '@fortawesome/free-solid-svg-icons';

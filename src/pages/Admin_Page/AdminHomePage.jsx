@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react'; // <--- แก้ไขบรรทัดนี้
+import React, { useState, useEffect, useMemo } from 'react'; 
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import styles from './AdminHomePage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import PaginationControls from '../../components/admin/PaginationControls'; // ตรวจสอบ Path ให้ถูกต้อง
-import { faInbox, faUserTie, faUserSecret, faUserShield, faFolderOpen, faFileCircleCheck, faFileCircleXmark, faHourglassHalf } from '@fortawesome/free-solid-svg-icons';
+import PaginationControls from '../../components/admin/PaginationControls'; 
+import { faInbox, faUserTie, faUserSecret, faUserShield, faFolderOpen, faFileCircleCheck, faFileCircleXmark, faHourglassHalf }
+from '@fortawesome/free-solid-svg-icons';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -17,7 +18,6 @@ const getAuthHeaders = () => {
     };
 };
 
-// --- Component ตารางที่สามารถใช้ซ้ำได้ ---
 const DocumentTable = ({ documents, headers, navigate }) => {
     const [filterBy, setFilterBy] = useState(headers.find(h => h.filterable)?.key || 'title');
     const [searchTerm, setSearchTerm] = useState('');
@@ -231,17 +231,16 @@ function AdminHomePage() {
                     advisorStatuses.includes(doc.status));
 
                 const externalAdvisorStatuses = [
-                    'รออาจารย์ภายนอกอนุมัติ',      // Status ID 7
-                    'รออาจารย์สำรองภายนอกอนุมัติ', // Status ID 15
-                    // หาก 'รออาจารย์สำรองภายในอนุมัติ' (ID 14) ถูกนับรวมด้วย ให้เพิ่มเข้าไปที่นี่
+                    'รออาจารย์ภายนอกอนุมัติ',      
+                    'รออาจารย์สำรองภายนอกอนุมัติ', 
+            
                 ];
                 const pendingExternalAdvisor = allDocumentsFromServer.filter(doc => 
                     externalAdvisorStatuses.includes(doc.status)
                 );
 
                 const executiveStatuses = [
-                    'รออธิการบดีอนุมัติ',     // Status ID 10
-                    // เพิ่มสถานะอื่นๆ ที่เกี่ยวข้องกับผู้บริหาร เช่น รอรองอธิการบดี ฯลฯ
+                    'รออธิการบดีอนุมัติ',     
                 ];
                 const pendingExecutive = allDocumentsFromServer.filter(doc => 
                     executiveStatuses.includes(doc.status)
@@ -254,7 +253,6 @@ function AdminHomePage() {
                     pendingAdvisor: pendingAdvisor,
                     pendingExternalAdvisor: pendingExternalAdvisor,
                     pendingExecutive: pendingExecutive,
-                    // สามารถเพิ่มการกรองสำหรับ section อื่นๆ ที่นี่
                 });
                 
                 if (setNotifications) setNotifications({});

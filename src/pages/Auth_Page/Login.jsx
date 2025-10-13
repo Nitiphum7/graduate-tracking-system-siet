@@ -1,5 +1,3 @@
-// src/pages/Auth_Page/Login.jsx
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
@@ -12,7 +10,7 @@ function LoginPage() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
-    const { login } = useAuth(); // ⭐ ดึงฟังก์ชัน login มาจาก Context
+    const { login } = useAuth(); 
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -20,13 +18,11 @@ function LoginPage() {
         setIsSubmitting(true);
 
         try {
-            // ⭐ [จุดแก้ไขหลัก] ⭐
+          
            const data = await login({ email, password });
 
-            // เมื่อ login ใน context สำเร็จ เราจะได้ข้อมูล user กลับมาใช้ได้เลย
             const { role_name: role, has_signed } = data.user;
 
-            // --- ส่วน Logic การ redirect เหมือนเดิม ---
             if (!has_signed && role !== 'admin') {
                 navigate('/signature');
             } else {
