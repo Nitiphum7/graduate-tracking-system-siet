@@ -2,12 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import styles from './ManageStudentDetailPage.module.css';
-import {
-    faUserCog, faUser, faBook, faUsers, faFileAlt,
+import {faUserCog, faUser, faBook, faUsers, faFileAlt,
     faHistory, faArrowLeft, faSave, faUserGraduate,
     faEye, faEyeSlash, faSyncAlt, faPlus, faUserPlus, faCheck, faTimes,
-    faPencilAlt, faTrashAlt, faClipboardCheck, faUserTie
-} from '@fortawesome/free-solid-svg-icons';
+    faPencilAlt, faTrashAlt, faClipboardCheck, faUserTie} from '@fortawesome/free-solid-svg-icons';
 import _ from 'lodash';
 import api from '../../utils/api';
 
