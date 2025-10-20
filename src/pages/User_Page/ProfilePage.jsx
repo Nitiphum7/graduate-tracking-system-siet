@@ -57,12 +57,11 @@ function ProfilePage() {
             if (!authUser) { setLoading(false); return; }
             setLoading(true);
             try {
-                // ✅✅✅ --- ส่วนที่แก้ไข --- ✅✅✅
-                // 1. ดึง Token จาก Local Storage
+        
                 const token = localStorage.getItem('token');
                 if (!token) {
                     console.error("No token found!");
-                    navigate('/login'); // ถ้าไม่มี token ให้ไปหน้า login
+                    navigate('/login'); 
                     return;
                 }
 
@@ -78,7 +77,7 @@ function ProfilePage() {
                     fetch(`${API_URL}/api/advisors`, { headers }),
                     fetch(`${API_URL}/api/submissions/student/${authUser.id}`, { headers })
                 ]);
-                // ✅✅✅ --- จบส่วนที่แก้ไข --- ✅✅✅
+          
 
                 for (const res of responses) {
                     if (!res.ok) throw new Error(`Failed to fetch data (status: ${res.status})`);
@@ -88,7 +87,6 @@ function ProfilePage() {
                     responses.map(res => res.json())
                 );
                 
-                // ... (ส่วนประมวลผลข้อมูลที่เหลือเหมือนเดิม) ...
                 const findAdvisorName = (advisorId) => {
                     if (!advisorId) return '-';
                     const advisor = advisors.find(a => a.advisor_id === advisorId);
@@ -126,7 +124,7 @@ function ProfilePage() {
         };
 
         loadProfileData();
-    }, [authUser, navigate]); // 👈 3. เพิ่ม navigate เข้าไปใน dependency array
+    }, [authUser, navigate]); 
 
     // --- Event Handlers (เพิ่มการส่ง Token) ---
     const handleSavePhone = async () => {
@@ -259,7 +257,7 @@ function ProfilePage() {
                                 <h3>ข้อมูลส่วนตัว</h3>
                                 <div className={styles.detailsGrid}>
                                     <div><label>ระดับการศึกษา:</label><span>{currentUser.degree || '-'}</span></div>
-                                    <div><label>แผนการเรียน:</label><span>{currentUser.plan || '-'}</span></div>
+                                    <div><label>แผนการเรียน:</label><span>{currentUser.study_plan || '-'}</span></div>
                                     <div><label>หลักสูตร/สาขา:</label><span>{currentUser.program_name || '-'}</span></div>
                                     <div><label>ภาควิชา:</label><span>{currentUser.department_name || '-'}</span></div>
                                     <div><label>คณะ:</label><span>{currentUser.faculty || '-'}</span></div>

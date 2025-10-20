@@ -43,7 +43,6 @@ export const submitForm1 = (submissionData) => {
 };
 
 export const getForm2Data = (userId) => {
-  // ตรงกับ GET /api/forms/form2-data/:userId
   return api.get(`/forms/form2-data/${userId}`);
 };
 
