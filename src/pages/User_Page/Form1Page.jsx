@@ -95,7 +95,7 @@ function Form1Page() {
                         <div><label>หลักสูตรและสาขาวิชา:</label><input type="text" value={studentInfo.program} disabled /></div>
                         <div><label>ภาควิชา:</label><input type="text" value={studentInfo.department} disabled /></div>
                         <div><label>คณะ:</label><input type="text" value={studentInfo.faculty} disabled /></div>
-                        <div><label>แผนการเรียน:</label><input type="text" value={studentInfo.plan} disabled /></div>
+                        <div><label>แผนการเรียน:</label><input type="text" value={studentInfo.study_plan} disabled /></div>
                         <div><label>เบอร์โทรศัพท์:</label><input type="text" value={studentInfo.phone} disabled /></div>
                         <div className={styles.fullWidth}><label>อีเมล:</label><input type="email" value={studentInfo.email} disabled /></div>
                     </div>
