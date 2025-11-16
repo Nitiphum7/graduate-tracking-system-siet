@@ -19,11 +19,8 @@
 
 /* --- ✅ 2. ปรับแก้ที่นี่: ให้ Grid ยืดเต็มที่และเอา margin/padding เดิมออก --- */
 .detailContainer {
-  flex-grow: 1; /* ทำให้ Grid ยืดเต็มความสูง */
-  overflow: hidden; /* ป้องกัน scrollbar ซ้อน */
-  /* max-width: 1500px; <-- ไม่จำเป็นแล้ว เพราะ pageWrapper จัดการ */
-  /* margin: 40px auto; <-- ไม่จำเป็นแล้ว เพราะ pageWrapper จัดการ */
-  /* padding: 0 30px; <-- ไม่จำเป็นแล้ว เพราะ pageWrapper จัดการ */
+  flex-grow: 1;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
