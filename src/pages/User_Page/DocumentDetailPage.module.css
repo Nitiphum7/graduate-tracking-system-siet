@@ -27,6 +27,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
+  white-space: nowrap;
   align-items: start;
 }
 
