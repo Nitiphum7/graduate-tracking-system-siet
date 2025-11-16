@@ -30,7 +30,6 @@ function AdminWorkflowCard({ document, onAction }) {
         
         let steps = [{
             title: 'นักศึกษายื่นเอกสาร',
-            actor: `โดย: ${document.prefix_th || ''}${document.first_name_th || ''} ${document.last_name_th || ''}`.trim(),
             isCompleted: true
         }];
 
@@ -39,7 +38,7 @@ function AdminWorkflowCard({ document, onAction }) {
         }
 
         switch (document.document_type_id) {
-            case 1: // Form 1: ขอแต่งตั้งอาจารย์ที่ปรึกษา
+            case 1: // Form 1: ขอแต่งตั้งอาจารย์ที่ปรึกษา (อันนี้เหมือนเดิม)
                 steps.push(
                     { title: s.PENDING_ADVISOR, isCompleted: isStepCompleted([s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
                     { title: s.PENDING_RECTOR, isCompleted: isStepCompleted([s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
@@ -48,27 +47,51 @@ function AdminWorkflowCard({ document, onAction }) {
                 );
                 break;
             
+            // --- 💡💡💡 จุดที่แก้ไข (ตามรูปวาด) 💡💡💡 ---
             case 2: // Form 2 & 6
             case 6:
+                // สร้าง list สถานะที่ "ผ่านแล้ว" (Completed) ของแต่ละขั้น
+                const completedForStaffConfirm = [s.APPROVED];
+                const completedForRector = [s.PENDING_STAFF_CONFIRM, ...completedForStaffConfirm];
+                const completedForAssistantRector = [s.PENDING_RECTOR, ...completedForRector];
+                const completedForProgramChair = [s.PENDING_ASSISTANT_RECTOR, ...completedForAssistantRector];
+                const completedForCommittee = [s.PENDING_PROGRAM_CHAIR, ...completedForProgramChair];
+                const completedForAdvisor = [s.PENDING_EXAM_COMMITTEE, ...completedForCommittee];
+
                 steps.push(
-                    { title: s.PENDING_ADVISORS_3, isCompleted: isStepCompleted([s.PENDING_EXAM_CHAIR, s.PENDING_EXAM_COMMITTEE, s.PENDING_INTERNAL_RESERVE, s.PENDING_EXTERNAL_RESERVE, s.PENDING_PROGRAM_CHAIR, s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_EXAM_CHAIR, isCompleted: isStepCompleted([s.PENDING_EXAM_COMMITTEE, s.PENDING_INTERNAL_RESERVE, s.PENDING_EXTERNAL_RESERVE, s.PENDING_PROGRAM_CHAIR, s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_EXAM_COMMITTEE, isCompleted: isStepCompleted([s.PENDING_INTERNAL_RESERVE, s.PENDING_EXTERNAL_RESERVE, s.PENDING_PROGRAM_CHAIR, s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_INTERNAL_RESERVE, isCompleted: isStepCompleted([s.PENDING_EXTERNAL_RESERVE, s.PENDING_PROGRAM_CHAIR, s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_EXTERNAL_RESERVE, isCompleted: isStepCompleted([s.PENDING_PROGRAM_CHAIR, s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_PROGRAM_CHAIR, isCompleted: isStepCompleted([s.PENDING_ASSISTANT_RECTOR, s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_ASSISTANT_RECTOR, isCompleted: isStepCompleted([s.PENDING_RECTOR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_RECTOR, isCompleted: isStepCompleted([s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_STAFF_CONFIRM, isCompleted: isStepCompleted([s.APPROVED]) },
+                    // 1. รออาจารย์ที่ปรึกษาอนุมัติ
+                    { title: s.PENDING_ADVISOR, isCompleted: isStepCompleted(completedForAdvisor) },
+                    
+                    // 2. รอคณะกรรมการสอบอนุมัติ (ยุบรวม)
+                    { title: s.PENDING_EXAM_COMMITTEE, isCompleted: isStepCompleted(completedForCommittee) },
+                    
+                    // 3. รอประธานหลักสูตรอนุมัติ
+                    { title: s.PENDING_PROGRAM_CHAIR, isCompleted: isStepCompleted(completedForProgramChair) },
+                    
+                    // 4. รอผู้ช่วยคณบดีอนุมัติ
+                    { title: s.PENDING_ASSISTANT_RECTOR, isCompleted: isStepCompleted(completedForAssistantRector) },
+                    
+                    // 5. รอคณบดีอนุมัติ
+                    { title: s.PENDING_RECTOR, isCompleted: isStepCompleted(completedForRector) },
+                    
+                    // 6. รอเจ้าหน้าที่ยืนยัน
+                    { title: s.PENDING_STAFF_CONFIRM, isCompleted: isStepCompleted(completedForStaffConfirm) },
+                    
+                    // 7. เสร็จสิ้น
                     { title: 'เสร็จสิ้น', isCompleted: currentStatus === s.APPROVED }
                 );
                 break;
+            // --- 💡💡💡 สิ้นสุดจุดที่แก้ไข 💡💡💡 ---
 
-            case 3: // Form 3
+            case 3: // Form 3 (อันนี้ผมแก้ให้ด้วยเลย)
+                const completedForStaff_F3 = [s.APPROVED];
+                const completedForExamChair_F3 = [s.PENDING_STAFF_CONFIRM, ...completedForStaff_F3];
+                const completedForAdvisor_F3 = [s.PENDING_EXAM_CHAIR, ...completedForExamChair_F3];
+                
                 steps.push(
-                    { title: s.PENDING_ADVISORS_3, isCompleted: isStepCompleted([s.PENDING_EXAM_CHAIR, s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_EXAM_CHAIR, isCompleted: isStepCompleted([s.PENDING_STAFF_CONFIRM, s.APPROVED]) },
-                    { title: s.PENDING_STAFF_CONFIRM, isCompleted: isStepCompleted([s.APPROVED]) },
+                    { title: s.PENDING_ADVISOR, isCompleted: isStepCompleted(completedForAdvisor_F3) },
+                    { title: s.PENDING_EXAM_CHAIR, isCompleted: isStepCompleted(completedForExamChair_F3) },
+                    { title: s.PENDING_STAFF_CONFIRM, isCompleted: isStepCompleted(completedForStaff_F3) },
                     { title: 'เสร็จสิ้น', isCompleted: currentStatus === s.APPROVED }
                 );
                 break;
@@ -126,14 +149,17 @@ function AdminWorkflowCard({ document, onAction }) {
         });
     };
 
+    // --------------------------------------------------------------------
+    // ‼️ ส่วน renderActions นี้ "ไม่ต้องแก้ไข" ‼️
+    // เพราะ Logic การส่งต่อ (Forward) ของ Admin ยังถูกต้องเหมือนเดิม
+    // (คือ Admin ส่งให้ "รออาจารย์ที่ปรึกษาอนุมัติ" เป็นขั้นตอนแรก)
+    // --------------------------------------------------------------------
     const renderActions = () => {
         const currentStatus = document.status;
         const s = STATUS_ENUM;
 
-        // 1. กำหนดว่าสถานะไหนบ้างที่ Admin ต้องเข้ามาดำเนินการ
         const actionableAdminStatuses = [s.WAITING_ADMIN_REVIEW, s.PENDING_STAFF_CONFIRM];
 
-        // 2. ถ้าสถานะปัจจุบัน ไม่อยู่ในกลุ่มที่ Admin ต้องทำ -> แสดงแค่ข้อความ
         if (!actionableAdminStatuses.includes(currentStatus)) {
             let statusMessage = `สถานะปัจจุบัน: ${currentStatus}`;
             if (currentStatus === s.APPROVED) statusMessage = 'เอกสารนี้ดำเนินการเสร็จสิ้นและอนุมัติแล้ว';
@@ -141,19 +167,19 @@ function AdminWorkflowCard({ document, onAction }) {
             return <div className={styles.actionBody}><p className={styles.waitingInfo}>{statusMessage}</p></div>;
         }
 
-        // 3. ถ้าสถานะอยู่ในกลุ่มที่ Admin ต้องทำ -> แสดงปุ่ม
         let targetStatusForForward;
         let nextStepText;
 
-        // --- Logic สำหรับสถานะ "รอตรวจสอบ" (ขั้นตอนแรก) ---
         if (currentStatus === s.WAITING_ADMIN_REVIEW) {
             switch (document.document_type_id) {
-                case 1: targetStatusForForward = s.PENDING_ADVISOR; break;
+                case 1:
                 case 2:
                 case 6:
-                case 3: targetStatusForForward = s.PENDING_ADVISORS_3; break;
+                case 3: targetStatusForForward = s.PENDING_ADVISOR; break;
+                
                 case 4:
                 case 5: targetStatusForForward = s.PENDING_MAIN_ADVISOR; break;
+                
                 case 7:
                 case 8:
                 case 9:
@@ -162,7 +188,6 @@ function AdminWorkflowCard({ document, onAction }) {
             nextStepText = targetStatusForForward === s.APPROVED ? "ตรวจสอบและอนุมัติ" : `ส่งต่อให้ "${targetStatusForForward}"`;
         } 
         
-        // --- Logic สำหรับสถานะ "รอเจ้าหน้าที่ยืนยัน" (ขั้นตอนท้ายๆ) ---
         else if (currentStatus === s.PENDING_STAFF_CONFIRM) {
             targetStatusForForward = s.APPROVED;
             nextStepText = "ยืนยันและอนุมัติ (ขั้นตอนสุดท้าย)";
@@ -193,7 +218,7 @@ function AdminWorkflowCard({ document, onAction }) {
     return (
         <div className={styles.card}>
             <h3 className={styles.header}>
-                <FontAwesomeIcon icon={faListCheck} /> ดำเนินการและสถานะ Workflow
+                <FontAwesomeIcon icon={faListCheck} /> สถานะของเอกสาร
             </h3>
             <div className={styles.timelineWrapper}>
                 <ul className={styles.timeline}>
@@ -207,4 +232,3 @@ function AdminWorkflowCard({ document, onAction }) {
 }
 
 export default AdminWorkflowCard;
-

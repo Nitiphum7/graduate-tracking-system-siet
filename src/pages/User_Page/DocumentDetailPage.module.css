@@ -25,8 +25,8 @@
   /* margin: 40px auto; <-- ไม่จำเป็นแล้ว เพราะ pageWrapper จัดการ */
   /* padding: 0 30px; <-- ไม่จำเป็นแล้ว เพราะ pageWrapper จัดการ */
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 30px;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
   align-items: start;
 }
 
@@ -141,7 +141,7 @@
   padding: 8px 0;
 }
 .infoList label { color: #555; }
-.infoList span { font-weight: 600; text-align: right; }
+.infoList span { font-weight: 600; text-align: right;}
 .commentBox {
   background-color: #f8f9fa;
   border-left: 4px solid #e9ecef;
@@ -360,4 +360,13 @@
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
+}
+
+.pageTitle {
+  font-size: 1.75rem; /* ปรับขนาดได้ตามชอบ */
+  font-weight: 600;
+  color: #333; /* สีตัวอักษร */
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0; /* เส้นคั่นบางๆ ข้างล่าง */
+  padding-bottom: 0.5rem;
 }

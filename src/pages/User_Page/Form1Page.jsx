@@ -29,13 +29,20 @@ function Form1Page() {
                 const response = await getForm1Data(user.id);
                 const data = response.data;
 
+// 🔴 รบกวนเพิ่ม 2 บรรทัดนี้ครับ 🔴
+                console.log('===== ข้อมูล advisors ทั้งหมด =====', data.advisors);
+                console.log('===== ดูข้อมูลอาจารย์คนแรก (ตัวอย่าง) =====', data.advisors[0]);
+                // 🔴 สิ้นสุดส่วนที่เพิ่ม 🔴
+
                 setStudentInfo({
                     ...data.studentInfo,
                     fullname: `${data.studentInfo.prefix_th || ''} ${data.studentInfo.first_name_th || ''} ${data.studentInfo.last_name_th || ''}`.trim(),
                     program: data.studentInfo.program_name,
                     department: data.studentInfo.department_name,
                 });
-                setAdvisors(data.advisors);
+                
+                // สมมติว่า data.advisors คือ Array ของอาจารย์ทั้งหมดพร้อม roles
+                setAdvisors(data.advisors); 
             } catch (err) {
                 setError(err.message || "ไม่สามารถดึงข้อมูลจาก Server ได้");
             } finally {
@@ -78,7 +85,20 @@ function Form1Page() {
     if (error) return <div className={styles.error}>เกิดข้อผิดพลาด: {error}</div>;
     if (!studentInfo) return <div className={styles.loading}>ไม่พบข้อมูลนักศึกษา...</div>;
 
-    const coAdvisorOptions = advisors.filter(adv => adv.advisor_id && adv.advisor_id !== mainAdvisor);
+    // --- 💡 จุดแก้ไข: ใช้คำที่ถูกต้องตาม ADVISOR_ROLES ---
+    
+    // กรองรายชื่ออาจารย์สำหรับ "ที่ปรึกษาหลัก"
+    const mainAdvisorOptions = advisors.filter(adv =>
+        Array.isArray(adv.roles) && adv.roles.includes('ที่ปรึกษาวิทยานิพนธ์') // <== แก้ไขคำนี้
+    );
+
+    // กรองรายชื่ออาจารย์สำหรับ "ที่ปรึกษาร่วม"
+    const coAdvisorOptions = advisors.filter(adv =>
+        Array.isArray(adv.roles) && adv.roles.includes('ที่ปรึกษาวิทยานิพนธ์ร่วม') && // <== แก้ไขคำนี้
+        adv.advisor_id && 
+        adv.advisor_id !== mainAdvisor
+    );
+    // --- 💡 สิ้นสุดจุดแก้ไข ---
 
     return (
         <div className={styles.formContainer}>
@@ -108,40 +128,27 @@ function Form1Page() {
                         <label htmlFor="main-advisor">อาจารย์ที่ปรึกษาหลัก*:</label>
                         <select id="main-advisor" required value={mainAdvisor} onChange={(e) => setMainAdvisor(e.target.value)}>
                             <option value="">-- กรุณาเลือกอาจารย์ที่ปรึกษาหลัก --</option>
-                            {advisors.map(adv => (
-                                <option key={adv.advisor_id} value={adv.advisor_id}>
-                                    {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`.trim()}
-                                </option>
-                            ))}
+                            
+                            {/* ใช้ mainAdvisorOptions ที่กรองแล้ว */}
+                            {mainAdvisorOptions.map(adv => (
+                            <option key={adv.advisor_id} value={adv.advisor_id}>
+                                {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`.trim()} ({adv.advisee_count}/10)
+                            </option>
+                        ))}
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label htmlFor="co-advisor">อาจารย์ที่ปรึกษาร่วม (ถ้ามี):</label>
                         <select id="co-advisor" value={coAdvisor} onChange={(e) => setCoAdvisor(e.target.value)}>
                             <option value="">-- สามารถเลือกอาจารย์ที่ปรึกษาร่วม --</option>
+                            
+                            {/* ใช้ coAdvisorOptions ที่กรองแล้ว */}
                             {coAdvisorOptions.map(adv => (
                                 <option key={adv.advisor_id} value={adv.advisor_id}>
                                     {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`.trim()}
                                 </option>
                             ))}
                         </select>
-                    </div>
-                </fieldset>
-
-                {/* --- 📝 ความคิดเห็นเพิ่มเติม --- */}
-                <fieldset>
-                    <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="student-comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
-                        <textarea
-                            id="student-comment"
-                            rows="4"
-                            maxLength="250"
-                            placeholder="ความคิดเห็นเพิ่มเติม... (ไม่เกิน 250 ตัวอักษร)"
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
-                        />
-                        <div className={styles.charCounter}>{comment.length} / 250</div>
                     </div>
                 </fieldset>
                 

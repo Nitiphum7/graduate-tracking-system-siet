@@ -71,16 +71,31 @@ function Form3Page() {
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     if (files.length > 0) {
-      setFormData(prev => ({ ...prev, [name]: files[0] }));
+      const file = files[0];
+      const previewUrl = URL.createObjectURL(file); // สร้าง URL ชั่วคราว
+
+      // ลบ URL เก่า (ถ้ามี) เพื่อป้องกัน memory leak
+      const oldFileData = formData[name];
+      if (oldFileData && oldFileData.previewUrl) {
+        URL.revokeObjectURL(oldFileData.previewUrl);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: { file: file, previewUrl: previewUrl } // 💡 เก็บเป็น Object
+      }));
     }
   };
   
   const handleRemoveFile = (fileName) => {
-    setFormData(prev => ({ ...prev, [fileName]: null }));
-    // ต้องไม่รีเซ็ต value ของ input[type=file] โดยตรงใน React
-    // แต่เนื่องจากเราใช้ Controlled Component (state) อยู่แล้ว การตั้งค่าเป็น null ใน state ก็เพียงพอ
-    // การใช้ document.getElementById().value = "" อาจทำให้เกิดปัญหาได้ ควรหลีกเลี่ยง
-    console.log(`File input for ${fileName} cleared in state.`); 
+      const fileData = formData[fileName];
+
+      // 💡 ถ้ามี URL อยู่, ให้ revoke มันทิ้ง
+      if (fileData && fileData.previewUrl) {
+        URL.revokeObjectURL(fileData.previewUrl);
+      }
+
+      setFormData(prev => ({ ...prev, [fileName]: null }));
   };
 
   // ✅✅✅ นี่คือ handleSubmit ที่แก้ไขให้ใช้ Axios แล้ว ✅✅✅
@@ -109,7 +124,7 @@ function Form3Page() {
           student_user_id: currentUser.id,
           files: [{ 
             type: 'เค้าโครงวิทยานิพนธ์ฉบับสมบูรณ์', 
-            name: formData.outlineFile.name,
+            name: formData.outlineFile.file.name,
             url: fileUrl // ส่งไฟล์ในรูปแบบ Data URL
           }],
           student_comment: formData.comment,
@@ -199,15 +214,24 @@ function Form3Page() {
             <small className={styles.fileNamingInstruction}>*ตั้งชื่อ: รหัสนักศึกษา_F3_PROPOSAL_REVISED_DDMMYYYY.pdf</small>
             <div className={styles.fileInputWrapper}>
               <label htmlFor="outlineFile" className={styles.fileInputLabel}>
-                {formData.outlineFile ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}
+                {formData.outlineFile ? 'เปลี่ยนไฟล์' : 'เเนบไฟล์'}
               </label>
               <input type="file" id="outlineFile" name="outlineFile" onChange={handleFileChange} required={!formData.outlineFile} accept=".pdf,.doc,.docx" />
               {formData.outlineFile ? (
                 <div className={styles.fileInfo}>
                   <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
-                  <span className={styles.fileNameDisplay}>
-                    {formData.outlineFile.name}
-                  </span>
+                  
+                  {/* --- ✅ โค้ดที่แก้ไข --- */}
+                  <a 
+                    href={formData.outlineFile.previewUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.fileNameDisplay} 
+                  >
+                    {formData.outlineFile.file.name}
+                  </a>
+                  {/* --- จบส่วนที่แก้ไข --- */}
+
                   <button type="button" onClick={() => handleRemoveFile('outlineFile')} className={styles.removeFileBtn}>
                     <FontAwesomeIcon icon={faTimes} />
                   </button>
@@ -216,23 +240,6 @@ function Form3Page() {
                 <span className={styles.fileNameDisplay}>ยังไม่ได้เลือกไฟล์</span>
               )}
             </div>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
-          <div className={styles.formGroup}>
-            <label htmlFor="comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
-            <textarea 
-              id="comment" 
-              name="comment"
-              rows="4" 
-              maxLength="250" 
-              placeholder="ความคิดเห็นเพิ่มเติม... (ไม่เกิน 250 ตัวอักษร)"
-              value={formData.comment}
-              onChange={handleChange}
-            />
-            <div className={styles.charCounter}>{formData.comment.length} / 250</div>
           </div>
         </fieldset>
         

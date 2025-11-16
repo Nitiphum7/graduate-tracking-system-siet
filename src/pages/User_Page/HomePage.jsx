@@ -61,17 +61,17 @@ function NextStepCard({ approvedDocs, rejectedDocs }) {
 
     // --- Logic การแสดงผลตามลำดับใหม่: ฟอร์ม 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> ผลสอบอังกฤษ ---
     if (!isForm1Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ยื่นขออาจารย์ที่ปรึกษา</span><p>แบบฟอร์มขอรับรองการเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ หลัก/ร่วม</p><Link to="/student/form1" className={styles.actionButton}>ไปที่ฟอร์ม 1</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ยื่นขออาจารย์ที่ปรึกษา</span><p>แบบฟอร์มขอรับรองการเป็นอาจารย์ที่ปรึกษาวิทยานิพนธ์ หลัก/ร่วม</p><Link to="/student/form1" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isForm2Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เสนอหัวข้อวิทยานิพนธ์</span><p>แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์ ระดับบัณฑิตศึกษา</p><Link to="/student/form2" className={styles.actionButton}>ไปที่ฟอร์ม 2</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>เสนอหัวข้อวิทยานิพนธ์</span><p>แบบเสนอหัวข้อและเค้าโครงวิทยานิพนธ์ ระดับบัณฑิตศึกษา</p><Link to="/student/form2" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isForm3Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>นำส่งเล่มเค้าโครง</span><p>แบบนำส่งเอกสารหัวข้อและเค้าโครงวิทยานิพนธ์ 1 เล่ม</p><Link to="/student/form3" className={styles.actionButton}>ไปที่ฟอร์ม 3</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>นำส่งเล่มเค้าโครง</span><p>แบบนำส่งเอกสารหัวข้อและเค้าโครงวิทยานิพนธ์ 1 เล่ม</p><Link to="/student/form3" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isForm4Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ขอหนังสือเชิญผู้ทรงคุณวุฒิ</span><p>แแบบขอหนังสือเชิญเป็นผู้ทรงคุณวุฒิตรวจและประเมิน...เพื่อการวิจัย</p><Link to="/student/form4" className={styles.actionButton}>ไปที่ฟอร์ม 4</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ขอหนังสือเชิญผู้ทรงคุณวุฒิ</span><p>แแบบขอหนังสือเชิญเป็นผู้ทรงคุณวุฒิตรวจและประเมิน...เพื่อการวิจัย</p><Link to="/student/form4" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isForm5Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ขออนุญาตเก็บข้อมูล</span><p>แบบขอหนังสือขออนุญาตเก็บรวบรวมข้อมูล (วิทยานิพนธ์)</p><Link to="/student/form5" className={styles.actionButton}>ไปที่ฟอร์ม 5</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ขออนุญาตเก็บข้อมูล</span><p>แบบขอหนังสือขออนุญาตเก็บรวบรวมข้อมูล (วิทยานิพนธ์)</p><Link to="/student/form5" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isForm6Approved) {
-      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ยื่นขอสอบวิทยานิพนธ์ สุดท้าย</span><p>ยื่นขอสอบวิทยานิพนธ์ขั้นสุดท้าย</p><Link to="/student/form6" className={styles.actionButton}>ไปที่ฟอร์ม 6</Link></div>;
+      nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ยื่นขอสอบวิทยานิพนธ์ สุดท้าย</span><p>ยื่นขอสอบวิทยานิพนธ์ขั้นสุดท้าย</p><Link to="/student/form6" className={styles.actionButton}>ไปยังหน้ากรอกแบบฟอร์ม</Link></div>;
     } else if (!isEnglishApproved) {
       nextStepContent = <div className={styles.nextStepBody}><span className={styles.actionTitle}>ยื่นผลการทดสอบภาษาอังกฤษ</span><p>ขั้นตอนสุดท้ายคือการยื่นผลคะแนนการทดสอบความสามารถทางภาษาอังกฤษ</p><Link to="/student/exam-submit" className={styles.actionButton}>ไปที่หน้ายื่นผลสอบ</Link></div>;
     } else {

@@ -60,8 +60,8 @@ function Form2Detail({ doc, user, advisors }) {
             <h4><FontAwesomeIcon icon={faUsers} /> คณะกรรมการสอบที่เสนอชื่อ</h4>
             <ul className={styles.infoList}>
                 <li><label>ประธานกรรมการสอบ:</label> <span>{chairName}</span></li>
-                <li><label>กรรมการ (ที่ปรึกษาร่วม 2):</label> <span>{coAdvisor2Name}</span></li>
-                <li><label>กรรมการคนที่ 5:</label> <span>{member5Name}</span></li>
+                <li><label>กรรมการสอบ (ท่านที่ 1):</label> <span>{coAdvisor2Name}</span></li>
+                <li><label>กรรมการสอบ (ท่านที่ 2):</label> <span>{member5Name}</span></li>
             </ul>
             <hr className={styles.subtleDivider} />
 

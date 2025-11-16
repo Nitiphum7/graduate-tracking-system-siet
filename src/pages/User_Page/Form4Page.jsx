@@ -309,14 +309,7 @@ function Form4Page() {
                         ))}
                     </div>
                 </fieldset>
-                <fieldset>
-                    <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="student-comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
-                        <textarea id="student-comment" name="comment" rows="4" maxLength="250" placeholder="ความคิดเห็นเพิ่มเติม..." value={formData.comment} onChange={handleCommentChange}></textarea>
-                        <div className={styles.charCounter}>{formData.comment.length} / 250</div>
-                    </div>
-                </fieldset>
+ 
                 <button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'กำลังส่ง...' : '📤 ยืนยันและส่งแบบฟอร์ม'}
                 </button>

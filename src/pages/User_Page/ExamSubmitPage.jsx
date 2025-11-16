@@ -215,10 +215,7 @@ const EnglishTestForm = ({ studentInfo, degree }) => {
                     ))}
                 </ul>
             </fieldset>
-            <fieldset>
-                <legend>📝 ความคิดเห็นเพิ่มเติม</legend>
-                <textarea rows="4" placeholder="ความคิดเห็นเพิ่มเติม..." value={comment} onChange={(e) => setComment(e.target.value)} />
-            </fieldset>
+
             <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
                 {isSubmitting ? 'กำลังส่ง...' : '📤 ยืนยันและส่งผลสอบ'}
             </button>
@@ -313,10 +310,7 @@ const QEForm = ({ studentInfo }) => {
                         )}
                 </ul>
             </fieldset>
-            <fieldset>
-                <legend>📝 ความคิดเห็นเพิ่มเติม</legend>
-                <textarea rows="4" placeholder="ความคิดเห็นเพิ่มเติม..." value={comment} onChange={(e) => setComment(e.target.value)} />
-            </fieldset>
+        
             <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
                     {isSubmitting ? 'กำลังส่ง...' : '📤 ยืนยันและส่งผลสอบ'}
             </button>

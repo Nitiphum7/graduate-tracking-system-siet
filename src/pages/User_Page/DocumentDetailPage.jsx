@@ -122,13 +122,6 @@ function DocumentDetailPage() {
                     )}
                 </div>
 
-                
-                
-                {/* --- ส่วนแสดงความคิดเห็น --- */}
-                <div className={styles.detailCard}>
-                    <h3>ความคิดเห็นเพิ่มเติม (จากผู้ยื่น)</h3>
-                    <p className={styles.commentBox}>{documentDetail.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
-                </div>
                 {documentDetail.admin_comment && (
                     <div className={styles.detailCard}>
                         <h3>ความคิดเห็น/เหตุผล (จากผู้ตรวจสอบ)</h3>
@@ -139,7 +132,7 @@ function DocumentDetailPage() {
                 {/* --- แผงควบคุมสำหรับ Advisor --- */}
                 {isApprover && taskId && (
                     <div className={`${styles.detailCard} ${styles.actionCard}`}>
-                        <h3>ดำเนินการอนุมัติ</h3>
+                        <h3>ดำเนินการเอกสาร อนุมัติ/ไม่อนุมัติ</h3>
                         <textarea
                             rows="4"
                             placeholder="เพิ่มความคิดเห็น (ถ้ามี)..."
@@ -153,7 +146,7 @@ function DocumentDetailPage() {
                                 onClick={() => handleApprovalAction('rejected')} 
                                 disabled={isSubmitting}
                             >
-                                <FontAwesomeIcon icon={faThumbsDown} /> ตีกลับ / ไม่อนุมัติ
+                                <FontAwesomeIcon icon={faThumbsDown} />ไม่อนุมัติ
                             </button>
                             <button 
                                 className={styles.approveBtn} 
@@ -166,12 +159,7 @@ function DocumentDetailPage() {
                         </div>
                     </div>
                 )}
-
-
-                <div className={styles.detailCard}>
-                    <h3>ความคิดเห็นเพิ่มเติม (จากผู้ยื่น)</h3>
-                    <p className={styles.commentBox}>{documentDetail.student_comment || 'ไม่มีความคิดเห็นเพิ่มเติม'}</p>
-                </div>
+                
                 {documentDetail.admin_comment && (
                     <div className={styles.detailCard}>
                         <h3>ความคิดเห็น/เหตุผล (จากเจ้าหน้าที่)</h3>

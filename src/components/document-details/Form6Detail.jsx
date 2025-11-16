@@ -154,9 +154,9 @@ function Form6Detail({ doc, user, advisors }) {
 
                     <li><label>ประธานกรรมการสอบ:</label> <span>{chairName}</span></li>
 
-                    <li><label>กรรมการ (ที่ปรึกษาร่วม 2):</label> <span>{coAdvisor2Name}</span></li>
+                    <li><label>กรรมการสอบ (ท่านที่ 1):</label> <span>{coAdvisor2Name}</span></li>
 
-                    <li><label>กรรมการสอบ (คนที่ 5):</label> <span>{member5Name}</span></li>
+                    <li><label>กรรมการสอบ (ท่านที่ 2):</label> <span>{member5Name}</span></li>
 
                 </ul>
 

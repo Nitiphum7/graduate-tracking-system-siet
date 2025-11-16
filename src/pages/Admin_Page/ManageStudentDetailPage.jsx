@@ -26,7 +26,7 @@ const INITIAL_NEW_STUDENT = {
     status_id: 1,
     publications: [],
     related_files: [],
-    gender: 'ชาย', 
+    gender: '', 
     middle_name_th: '', 
     middle_name_en: '', 
     entry_year: '', 
@@ -414,7 +414,7 @@ const CommitteeSection = ({ student, advisors, handleInputChange }) => { // <---
                         </select>
                     </div>
                     <div className={styles.formGroup}>
-                        <label>กรรมการ (คนที่ 5)</label>
+                        <label>กรรมการ (ท่านที่ 2)</label>
                         <select
                             name="proposal_member5_id"
                             value={student.proposal_member5_id || ''} // <--- เปลี่ยนเป็น student.proposal_member5_id

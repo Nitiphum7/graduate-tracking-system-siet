@@ -1,25 +1,48 @@
-// src/components/admin/AdvisorTable.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../pages/Admin_Page/ManageUsersPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencilAlt, faTrashAlt, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faPencilAlt, 
+    faTrashAlt, 
+    faSort, 
+    faSortUp, 
+    faSortDown, 
+    faSearch // 💡 1. Import ไอคอนค้นหา
+} from '@fortawesome/free-solid-svg-icons';
 import PaginationControls from './PaginationControls';
 
 function AdvisorTable({ advisors, onDelete }) {
     const navigate = useNavigate();
     const [sortConfig, setSortConfig] = useState({ key: 'full_name', direction: 'ascending' });
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState(''); // 💡 2. เพิ่ม State สำหรับเก็บค่าค้นหา
     const itemsPerPage = 10;
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [advisors]);
+    }, [advisors, searchTerm]); // 💡 3. เพิ่ม searchTerm (ถ้าค้นหาใหม่ ให้กลับไปหน้า 1)
 
     const sortedAdvisors = useMemo(() => {
-        let sortableItems = [...advisors];
+        // 💡 4. เริ่มด้วยการกรองข้อมูลก่อน
+        let filteredItems = [...advisors];
+        
+        if (searchTerm) {
+            const lowerCaseSearch = searchTerm.toLowerCase();
+            filteredItems = filteredItems.filter(advisor => {
+                const fullName = `${advisor.prefix_th || ''}${advisor.first_name_th || ''} ${advisor.last_name_th || ''}`.toLowerCase();
+                const email = (advisor.email || '').toLowerCase();
+                const advisorId = (advisor.advisor_id || '').toLowerCase();
+
+                return fullName.includes(lowerCaseSearch) ||
+                       email.includes(lowerCaseSearch) ||
+                       advisorId.includes(lowerCaseSearch);
+            });
+        }
+        
+        // 💡 5. นำข้อมูลที่กรองแล้วมาจัดเรียง
         if (sortConfig.key) {
-            sortableItems.sort((a, b) => {
+            filteredItems.sort((a, b) => {
                 let valA, valB;
                 if (sortConfig.key === 'full_name') {
                     valA = `${a.first_name_th} ${a.last_name_th}`;
@@ -34,8 +57,8 @@ function AdvisorTable({ advisors, onDelete }) {
                 return 0;
             });
         }
-        return sortableItems;
-    }, [advisors, sortConfig]);
+        return filteredItems;
+    }, [advisors, sortConfig, searchTerm]); // 💡 6. เพิ่ม searchTerm ใน dependency
 
     const requestSort = (key) => {
         let direction = 'ascending';
@@ -60,6 +83,19 @@ function AdvisorTable({ advisors, onDelete }) {
 
     return (
         <>
+            {/* 💡 7. เพิ่มแถบค้นหา (Search Bar) 💡 */}
+            <div className={styles.searchContainer}>
+                <FontAwesomeIcon icon={faSearch} className={styles.searchIcon} />
+                <input
+                    type="text"
+                    placeholder="ค้นหาอาจารย์ (ชื่อ, อีเมล, รหัส)..."
+                    className={styles.searchInput}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            {/* 💡 สิ้นสุดแถบค้นหา 💡 */}
+
             <div className={styles.tableContainer}>
                 <table>
                     <thead>
@@ -93,7 +129,10 @@ function AdvisorTable({ advisors, onDelete }) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className={styles.noDataRow}>ไม่พบข้อมูลอาจารย์</td>
+                                {/* 💡 8. เปลี่ยนข้อความให้สอดคล้องกับการค้นหา */}
+                                <td colSpan="6" className={styles.noDataRow}>
+                                    {searchTerm ? 'ไม่พบข้อมูลอาจารย์ที่ตรงกับการค้นหา' : 'ไม่พบข้อมูลอาจารย์'}
+                                </td>
                             </tr>
                         )}
                     </tbody>

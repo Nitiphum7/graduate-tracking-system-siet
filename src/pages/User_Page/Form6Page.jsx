@@ -209,14 +209,14 @@ function Form6Page() {
                         </div>
                         {/* 💡 เพิ่ม Dropdown ที่เหลือ (ต้องมีในโค้ดต้นฉบับเพื่อให้ฟอร์มสมบูรณ์) */}
                         <div className={styles.formGroup}>
-                            <label htmlFor="coAdvisor2">กรรมการ (ที่ปรึกษาร่วม 2)*</label>
+                            <label htmlFor="coAdvisor2">กรรมการสอบ (ท่านที่ 1)*</label>
                             <select id="coAdvisor2" name="coAdvisor2" value={formData.coAdvisor2} onChange={handleChange} required>
                                 <option value="">-- กรุณาเลือก --</option>
                                 {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
                             </select>
                         </div>
                         <div className={styles.formGroup}>
-                            <label htmlFor="committeeMember5">กรรมการสอบ (คนที่ 5)*</label>
+                            <label htmlFor="committeeMember5">กรรมการสอบ (ท่านที่ 2)*</label>
                             <select id="committeeMember5" name="committeeMember5" value={formData.committeeMember5} onChange={handleChange} required>
                                 <option value="">-- กรุณาเลือก --</option>
                                 {advisorLists.internalMembers.map(adv => <option key={adv.advisor_id} value={adv.advisor_id}>{`${adv.prefix_th}${adv.first_name_th} ${adv.last_name_th}`.trim()}</option>)}
@@ -259,15 +259,6 @@ function Form6Page() {
                     </div>
                     <FileInputBox id="publicationProofFile" name="publicationProofFile" label="4. หลักฐานการตอบรับการตีพิมพ์/นำเสนอผลงาน*" instruction="*ชื่อไฟล์: รหัสนักศึกษา_F6_PUBLISH_PROOF.pdf/jpg/png" file={formData.files.publicationProofFile} onChange={handleFileChange} onRemove={handleRemoveFile} required={true}/>
                     <FileInputBox id="gradeCheckProofFile" name="gradeCheckProofFile" label="5. หลักฐานการตรวจสอบผลการเรียน*" instruction="*ชื่อไฟล์: รหัสนักศึกษา_F6_GRADE_PROOF.pdf/jpg/png" file={formData.files.gradeCheckProofFile} onChange={handleFileChange} onRemove={handleRemoveFile} required={true}/>
-                </fieldset>
-                
-                <fieldset>
-                    <legend>📝 ความคิดเห็นเพิ่มเติม (ถ้ามี)</legend>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="comment">คุณสามารถใส่คำแนะนำหรือข้อมูลเพิ่มเติมถึงเจ้าหน้าที่ได้ที่นี่</label>
-                        <textarea id="comment" name="comment" rows="4" maxLength="250" placeholder="ความคิดเห็นเพิ่มเติม..." value={formData.comment} onChange={handleChange}></textarea>
-                        <div className={styles.charCounter}>{formData.comment.length} / 250</div>
-                    </div>
                 </fieldset>
                 
                 <div className={styles.submitContainer}>

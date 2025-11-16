@@ -17,7 +17,7 @@ import AdviseeTable from '../../components/admin/AdviseeTable';
 const THAI_PREFIXES = ['นาย', 'นาง', 'นางสาว', 'อ.', 'ผศ.', 'รศ.', 'ศ.', 'ผศ.ดร.', 'รศ.ดร.', 'ศ.ดร.'];
 const ENG_PREFIXES = ['Mr.', 'Mrs.', 'Ms.', 'Lecturer', 'Asst. Prof.', 'Assoc. Prof.', 'Prof.', 'Asst. Prof. Dr.', 'Assoc. Prof. Dr.', 'Prof. Dr.'];
 const GENDERS = ['ชาย', 'หญิง', 'อื่นๆ'];
-const ADVISOR_TYPES = ["อาจารย์ประจำ", "อาจารย์ประจำหลักสูตร", "อาจารย์ผู้รับผิดชอบหลักสูตร", "อาจารย์บัณฑิตพิเศษภายใน", "อาจารย์บัณฑิตพิเศษภายนอก", "ผู้บริหาร"];
+const ADVISOR_TYPES = ["อาจารย์ประจำ", "อาจารย์ประจำหลักสูตร", "อาจารย์ผู้รับผิดชอบหลักสูตร", "อาจารย์บัณฑิตพิเศษภายใน", "อาจารย์บัณฑิตพิเศษภายนอก", "ผู้บริหาร","เกษียณ"];
 const ADVISOR_ROLES = ["สอน", "สอบ", "ที่ปรึกษาวิทยานิพนธ์", "ที่ปรึกษาวิทยานิพนธ์ร่วม", "ประธานสอบ", "คณบดี", "ผู้ช่วยคณบดี"];
 const ASSISTANT_DEAN_DEPTS = ["วิชาการและวิจัย", "พัฒนานักศึกษา", "บริหาร"];
 
@@ -548,6 +548,15 @@ function ManageAdvisorDetailPage() {
 
         const token = localStorage.getItem('token');
 
+        let dataToSend = _.cloneDeep(advisorData);
+
+        // 💡 2. ตรวจสอบ "Action" เกษียณ
+        if (dataToSend.type === 'เกษียณ') {
+            // สั่งลบบทบาทหน้าที่ทั้งหมดตามที่ขอ
+            dataToSend.roles = []; 
+            
+        }
+
         try {
             const response = await fetch(`/api/advisors/${advisorId}`, {
                 method: 'PUT',
@@ -555,7 +564,7 @@ function ManageAdvisorDetailPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(advisorData),
+                body: JSON.stringify(dataToSend),
             });
 
             if (!response.ok) {
@@ -566,7 +575,12 @@ function ManageAdvisorDetailPage() {
             const savedData = await response.json();
             alert(savedData.message || "บันทึกข้อมูลอาจารย์สำเร็จ");
 
-            setOriginalData(_.cloneDeep(advisorData));
+            const newState = _.cloneDeep(dataToSend);
+            newState.password = ''; // ล้างรหัสผ่านออกจาก state
+            newState.confirm_password = ''; // ล้างรหัสผ่านออกจาก state
+
+            setAdvisorData(newState);     // อัปเดตข้อมูลในฟอร์ม
+            setOriginalData(newState); // อัปเดตข้อมูลอ้างอิง (เพื่อปิด "บันทึก")
             setIsDirty(false);
 
         } catch (error) {

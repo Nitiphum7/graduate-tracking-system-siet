@@ -112,7 +112,12 @@ function AdminDocumentDetailPage() {
 
     return (
         <div className={styles.pageWrapper}>
-            <main className={styles.detailContainer}>
+        <h1 className={styles.pageTitle}>
+    {documentDetail.title || 'ตรวจสอบเอกสาร'}
+</h1>
+<p className={styles.pageSubtitle}>ตรวจสอบเอกสารเเละดำเนินการ
+        </p>
+        <main className={styles.detailContainer}>
                 <div className={styles.documentContent}>
                     <div className={styles.detailCard}>
                         {DetailComponent ? (

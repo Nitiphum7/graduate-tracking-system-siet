@@ -311,3 +311,32 @@
 .tableContainer th[onclick]:hover svg {
     opacity: 1;
 }
+
+/* ... (โค้ด CSS เดิมของคุณ) ... */
+
+.searchContainer {
+  position: relative;
+  padding-left: 50px;
+  padding-right: 25px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 500px; /* หรือ 100% ถ้าต้องการให้เต็มความกว้าง */
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 15px 10px 40px; /* เว้นที่สำหรับไอคอน */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit; /* ให้ใช้ Font เดียวกับหน้าเว็บ */
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+}
