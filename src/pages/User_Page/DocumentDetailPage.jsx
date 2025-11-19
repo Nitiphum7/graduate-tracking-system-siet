@@ -121,13 +121,6 @@ function DocumentDetailPage() {
                         <p>ยังไม่มี Component สำหรับแสดงรายละเอียดของเอกสารประเภทนี้</p>
                     )}
                 </div>
-
-                {documentDetail.admin_comment && (
-                    <div className={styles.detailCard}>
-                        <h3>ความคิดเห็น/เหตุผล (จากผู้ตรวจสอบ)</h3>
-                        <p className={styles.commentBox}>{documentDetail.admin_comment}</p>
-                    </div>
-                )}
                 
                 {/* --- แผงควบคุมสำหรับ Advisor --- */}
                 {isApprover && taskId && (
