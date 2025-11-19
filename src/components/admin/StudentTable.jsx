@@ -3,23 +3,47 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../../pages/Admin_Page/ManageUsersPage.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencilAlt, faTrashAlt, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faPencilAlt, 
+    faTrashAlt, 
+    faSort, 
+    faSortUp, 
+    faSortDown,
+    faSearch // 💡 1. Import ไอคอนค้นหา
+} from '@fortawesome/free-solid-svg-icons';
 import PaginationControls from './PaginationControls';
 
 function StudentTable({ students, advisors, onDelete }) {
     const navigate = useNavigate();
     const [sortConfig, setSortConfig] = useState({ key: 'student_id', direction: 'ascending' });
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState(''); // 💡 2. เพิ่ม State สำหรับเก็บค่าค้นหา
     const itemsPerPage = 10;
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [students]);
+    }, [students, searchTerm]); // 💡 3. เพิ่ม searchTerm ใน dependency
 
     const sortedStudents = useMemo(() => {
-        let sortableItems = [...students];
+        // 💡 4. เริ่มด้วยการกรองข้อมูลก่อน (Filtering Logic)
+        let filteredItems = [...students];
+        
+        if (searchTerm) {
+            const lowerCaseSearch = searchTerm.toLowerCase();
+            filteredItems = filteredItems.filter(student => {
+                const fullName = `${student.prefix_th || ''}${student.first_name_th || ''} ${student.last_name_th || ''}`.toLowerCase();
+                const email = (student.email || '').toLowerCase();
+                const studentId = (student.student_id || '').toLowerCase();
+
+                return fullName.includes(lowerCaseSearch) ||
+                       email.includes(lowerCaseSearch) ||
+                       studentId.includes(lowerCaseSearch);
+            });
+        }
+
+        // 💡 5. นำข้อมูลที่กรองแล้วมาจัดเรียง (Sorting Logic)
         if (sortConfig.key !== null) {
-            sortableItems.sort((a, b) => {
+            filteredItems.sort((a, b) => {
                 let valA = a[sortConfig.key] || '';
                 let valB = b[sortConfig.key] || '';
 
@@ -33,8 +57,8 @@ function StudentTable({ students, advisors, onDelete }) {
                 return 0;
             });
         }
-        return sortableItems;
-    }, [students, sortConfig]);
+        return filteredItems;
+    }, [students, sortConfig, searchTerm]); // 💡 6. เพิ่ม searchTerm
 
     const requestSort = (key) => {
         let direction = 'ascending';
@@ -55,6 +79,19 @@ function StudentTable({ students, advisors, onDelete }) {
 
     return (
         <>
+            {/* 💡 7. เพิ่มแถบค้นหา (Search Bar) 💡 */}
+            <div className={styles.searchContainer}>
+                <FontAwesomeIcon icon={faSearch} className={styles.searchIcon} />
+                <input
+                    type="text"
+                    placeholder="ค้นหานักศึกษา (ชื่อ, อีเมล, รหัส)..."
+                    className={styles.searchInput}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            {/* 💡 สิ้นสุดแถบค้นหา 💡 */}
+
             <div className={styles.tableContainer}>
                 <table>
                     <thead>
@@ -68,27 +105,36 @@ function StudentTable({ students, advisors, onDelete }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentTableData.map((student) => {
-                            const mainAdvisor = advisors.find(a => a.advisor_id === student.main_advisor_id);
-                            const advisorName = mainAdvisor ? `${mainAdvisor.prefix_th}${mainAdvisor.first_name_th} ${mainAdvisor.last_name_th}`.trim() : '-';
-                            return (
-                                <tr key={student.student_id} className={styles.clickableRow} onClick={() => navigate(`/admin/manage-users/student/${student.student_id}`)}>
-                                    <td>{student.student_id}</td>
-                                    <td>{`${student.prefix_th}${student.first_name_th} ${student.last_name_th}`}</td>
-                                    <td>{student.email}</td>
-                                    <td>{student.phone || '-'}</td>
-                                    <td>{advisorName}</td>
-                                    <td className={styles.actionCell}>
-                                        <button className={styles.actionBtn} title="แก้ไข" onClick={(e) => { e.stopPropagation(); navigate(`/admin/manage-users/student/${student.student_id}`) }}>
-                                            <FontAwesomeIcon icon={faPencilAlt} />
-                                        </button>
-                                        <button className={styles.actionBtn} title="ลบ" onClick={(e) => { e.stopPropagation(); onDelete(student.student_id); }}>
-                                            <FontAwesomeIcon icon={faTrashAlt} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                        {currentTableData.length > 0 ? (
+                            currentTableData.map((student) => {
+                                const mainAdvisor = advisors.find(a => a.advisor_id === student.main_advisor_id);
+                                const advisorName = mainAdvisor ? `${mainAdvisor.prefix_th}${mainAdvisor.first_name_th} ${mainAdvisor.last_name_th}`.trim() : '-';
+                                return (
+                                    <tr key={student.student_id} className={styles.clickableRow} onClick={() => navigate(`/admin/manage-users/student/${student.student_id}`)}>
+                                        <td>{student.student_id}</td>
+                                        <td>{`${student.prefix_th}${student.first_name_th} ${student.last_name_th}`}</td>
+                                        <td>{student.email}</td>
+                                        <td>{student.phone || '-'}</td>
+                                        <td>{advisorName}</td>
+                                        <td className={styles.actionCell}>
+                                            <button className={styles.actionBtn} title="แก้ไข" onClick={(e) => { e.stopPropagation(); navigate(`/admin/manage-users/student/${student.student_id}`) }}>
+                                                <FontAwesomeIcon icon={faPencilAlt} />
+                                            </button>
+                                            <button className={styles.actionBtn} title="ลบ" onClick={(e) => { e.stopPropagation(); onDelete(student.student_id); }}>
+                                                <FontAwesomeIcon icon={faTrashAlt} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        ) : (
+                            <tr>
+                                {/* 💡 8. เปลี่ยนข้อความเมื่อไม่พบข้อมูล */}
+                                <td colSpan="6" className={styles.noDataRow}>
+                                    {searchTerm ? 'ไม่พบข้อมูลนักศึกษาที่ตรงกับการค้นหา' : 'ไม่พบข้อมูลนักศึกษา'}
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
