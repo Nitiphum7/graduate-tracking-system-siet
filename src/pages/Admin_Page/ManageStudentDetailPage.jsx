@@ -358,13 +358,33 @@ const ThesisSection = ({ student, advisors, handleInputChange }) => {
     );
 };
 
-const CommitteeSection = ({ student, advisors, handleInputChange }) => { // <--- ถูกต้องแล้วที่นี่รับ props ชื่อ 'student'
-    const renderAdvisorOptions = (placeholder) => (
+// --- 🛠️ แก้ไข: CommitteeSection ให้กรองรายชื่อตาม Role (แบบเดียวกับ Form 1) ---
+const CommitteeSection = ({ student, advisors, handleInputChange }) => {
+
+    // 1. แยกอาจารย์ภายใน / ภายนอก
+    const internalAdvisors = advisors.filter(a => a.type !== 'อาจารย์บัณฑิตพิเศษภายนอก');
+    const externalAdvisors = advisors.filter(a => a.type === 'อาจารย์บัณฑิตพิเศษภายนอก');
+
+    // 2. กรองตาม Role
+    // - ที่ปรึกษาหลัก: ต้องมี Role "ที่ปรึกษาวิทยานิพนธ์"
+    const mainAdvisorList = internalAdvisors.filter(a => a.roles && a.roles.includes('ที่ปรึกษาวิทยานิพนธ์'));
+
+    // - ที่ปรึกษาร่วม: ต้องมี Role "ที่ปรึกษาวิทยานิพนธ์ร่วม"
+    const coAdvisorList = internalAdvisors.filter(a => a.roles && a.roles.includes('ที่ปรึกษาวิทยานิพนธ์ร่วม'));
+
+    // - ประธานสอบ: ต้องมี Role "ประธานสอบ"
+    const chairList = internalAdvisors.filter(a => a.roles && a.roles.includes('ประธานสอบ'));
+
+    // - กรรมการสอบ (สอบ/สำรองใน): ต้องมี Role "สอบ"
+    const examinerList = internalAdvisors.filter(a => a.roles && a.roles.includes('สอบ'));
+
+
+    const renderAdvisorOptions = (advisorList, placeholder) => (
         <>
             <option value="">-- {placeholder} --</option>
-            {advisors.map(adv => (
+            {advisorList.map(adv => (
                 <option key={adv.advisor_id} value={adv.advisor_id}>
-                    {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`}
+                    {`${adv.prefix_th || ''}${adv.first_name_th || ''} ${adv.last_name_th || ''}`.trim()}
                 </option>
             ))}
         </>
@@ -375,6 +395,7 @@ const CommitteeSection = ({ student, advisors, handleInputChange }) => { // <---
             <h3><FontAwesomeIcon icon={faUsers} /> คณะกรรมการสอบวิทยานิพนธ์</h3>
             <p className={styles.cardDescription}>ข้อมูลส่วนนี้จะถูกใช้เมื่อนักศึกษายื่นฟอร์มขอสอบต่างๆ</p>
             <div className={styles.cardBody}>
+                
                 {/* อาจารย์ที่ปรึกษา */}
                 <div className={styles.formSection}>
                     <h4>อาจารย์ที่ปรึกษา</h4>
@@ -382,70 +403,77 @@ const CommitteeSection = ({ student, advisors, handleInputChange }) => { // <---
                         <div className={styles.formGroup}>
                             <label>อาจารย์ที่ปรึกษาหลัก</label>
                             <select name="main_advisor_id" value={student.main_advisor_id || ''} onChange={handleInputChange}>
-                                {renderAdvisorOptions('เลือกอาจารย์')}
+                                {/* ✅ ใช้ mainAdvisorList (ที่ปรึกษาวิทยานิพนธ์) */}
+                                {renderAdvisorOptions(mainAdvisorList, 'เลือกอาจารย์')}
                             </select>
                         </div>
                         <div className={styles.formGroup}>
                             <label>อาจารย์ที่ปรึกษาร่วม 1</label>
                             <select name="co_advisor1_id" value={student.co_advisor1_id || ''} onChange={handleInputChange}>
-                                {renderAdvisorOptions('ไม่มี')}
-                            </select>
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>อาจารย์ที่ปรึกษาร่วม 2</label>
-                            <select name="co_advisor2_id" value={student.co_advisor2_id || ''} onChange={handleInputChange}>
-                                {renderAdvisorOptions('ไม่มี')}
+                                {/* ✅ ใช้ coAdvisorList (ที่ปรึกษาวิทยานิพนธ์ร่วม) */}
+                                {renderAdvisorOptions(coAdvisorList, 'ไม่มี')}
                             </select>
                         </div>
                     </div>
                 </div>
 
-                {/* คณะกรรมการสอบ - แก้ไขตรงนี้ */}
+                {/* คณะกรรมการสอบ */}
                 <h4 className={styles.sectionTitle}>คณะกรรมการสอบ</h4>
                 <div className={`${styles.formGrid} ${styles.twoCols}`}>
                     <div className={styles.formGroup}>
                         <label>ประธานกรรมการ</label>
                         <select
                             name="proposal_chair_id"
-                            value={student.proposal_chair_id || ''} // <--- เปลี่ยนเป็น student.proposal_chair_id
+                            value={student.proposal_chair_id || ''}
                             onChange={handleInputChange}
                         >
-                            {renderAdvisorOptions('เลือกประธาน')}
+                            {/* ✅ ใช้ chairList (ประธานสอบ) */}
+                            {renderAdvisorOptions(chairList, 'เลือกประธาน')}
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>กรรมการ (ท่านที่ 2)</label>
                         <select
                             name="proposal_member5_id"
-                            value={student.proposal_member5_id || ''} // <--- เปลี่ยนเป็น student.proposal_member5_id
+                            value={student.proposal_member5_id || ''}
                             onChange={handleInputChange}
                         >
-                            {renderAdvisorOptions('เลือกกรรมการ')}
+                            {/* ✅ ใช้ examinerList (สอบ) */}
+                            {renderAdvisorOptions(examinerList, 'เลือกกรรมการ')}
                         </select>
                     </div>
+                    <div className={styles.formGroup}>
+                            <label>กรรมการสอบ (ท่านที่ 1)</label>
+                            <select name="co_advisor2_id" value={student.co_advisor2_id || ''} onChange={handleInputChange}>
+                                {/* ✅ ใช้ examinerList (สอบ) */}
+                                {renderAdvisorOptions(examinerList, 'ไม่มี')}
+                            </select>
+                        </div>
                 </div>
 
-                {/* คณะกรรมการสำรอง - แก้ไขตรงนี้ */}
+                {/* คณะกรรมการสำรอง */}
                 <h4 className={styles.sectionTitle}>คณะกรรมการสำรอง</h4>
                 <div className={`${styles.formGrid} ${styles.twoCols}`}>
                     <div className={styles.formGroup}>
                         <label>กรรมการ (อาจารย์บัณฑิตพิเศษภายนอก)</label>
                         <select
                             name="proposal_reserve_external_id"
-                            value={student.proposal_reserve_external_id || ''} // <--- เปลี่ยนเป็น student.proposal_reserve_external_id
+                            value={student.proposal_reserve_external_id || ''}
                             onChange={handleInputChange}
                         >
-                            {renderAdvisorOptions('เลือกกรรมการ (ภายนอก)')}
+                            {/* ✅ ใช้ externalAdvisors (อาจารย์ภายนอก) */}
+                            {renderAdvisorOptions(externalAdvisors, 'เลือกกรรมการ (ภายนอก)')}
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>กรรมการ (อาจารย์ภายใน)</label>
                         <select
                             name="proposal_reserve_internal_id"
-                            value={student.proposal_reserve_internal_id || ''} // <--- เปลี่ยนเป็น student.proposal_reserve_internal_id
+                            value={student.proposal_reserve_internal_id || ''}
                             onChange={handleInputChange}
                         >
-                            {renderAdvisorOptions('เลือกกรรมการ (ภายใน)')}
+                            {/* ✅ ใช้ examinerList (สอบ) */}
+                            {renderAdvisorOptions(examinerList, 'เลือกกรรมการ (ภายใน)')}
                         </select>
                     </div>
                 </div>
